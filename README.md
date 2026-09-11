@@ -1,62 +1,46 @@
-[![slack](https://img.shields.io/badge/slack-join-brightgreen.svg?logo=slack)](https://join.slack.com/t/ml-lam/shared_invite/zt-2t112zvm8-Vt6aBvhX7nYa6Kbj_LkCBQ)
-[![Linting](https://github.com/mllam/neural-lam/actions/workflows/pre-commit.yml/badge.svg?branch=main)](https://github.com/mllam/neural-lam/actions/workflows/pre-commit.yml)
-[![CPU+GPU testing](https://github.com/mllam/neural-lam/actions/workflows/install-and-test.yml/badge.svg?branch=main)](https://github.com/mllam/neural-lam/actions/workflows/install-and-test.yml)
+[![arXiv](https://img.shields.io/badge/arXiv-2605.15470-b31b1b.svg)](https://arxiv.org/abs/2605.15470)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.txt)
+
+# Njord
+
+A probabilistic graph neural network for ensemble ocean forecasting, for both **global** and **regional** domains.
+
+Njord combines a deep latent-variable model with hierarchical GNNs so that each forecast step is sampled in a single forward pass. The same framework is used globally at 0.25° (Njord) and regionally for the Baltic Sea at 2 km (Njord-Baltic).
+
+This is the code for the paper [*Njord: A Probabilistic Graph Neural Network for Ensemble Ocean Forecasting*](https://arxiv.org/html/2605.15470v2).
+
+The implementation is based on [mllam/neural-lam](https://github.com/mllam/neural-lam), adapted to ocean grids. Training-ready datasets are built with [mllam-data-prep](https://github.com/mllam/mllam-data-prep). The Python package is still imported as `neural_lam`.
 
 <p align="middle">
-    <img src="figures/neural_lam_header.png" width="700">
-</p>
-
-Neural-LAM is a repository of graph-based neural weather prediction models for Limited Area Modeling (LAM).
-Also global forecasting is possible, but currently on a [different branch](https://github.com/mllam/neural-lam/tree/prob_model_global) ([planned to be merged with main](https://github.com/mllam/neural-lam/issues/63)).
-The code uses [PyTorch](https://pytorch.org/) and [PyTorch Lightning](https://lightning.ai/pytorch-lightning).
-Graph Neural Networks are implemented using [PyG](https://pyg.org/) and logging is set up through [Weights & Biases](https://wandb.ai/).
-
-# This Branch: Probabilistic LAM Forecasting
-<p align="middle">
-    <img src="figures/graph_efm_forecast_nlwrs.gif" width="700"/>
+    <img src="figures/global_model.png" width="720">
 </p>
 <p align="middle">
-    <em>Example ensemble forecast from Graph-EFM for net solar longwave radiation.</em>
+    <em>One-step prediction in Njord. Two previous ocean states and atmospheric forcing are encoded onto a hierarchical mesh over sea points only. A latent variable <code>Z<sup>t</sup></code> is injected in the GNN processor; the decoder maps back to the grid and adds a residual to <code>X<sup>t−1</sup></code>, producing a sample from the one-step forecast distribution.</em>
 </p>
 
-This branch contains the code for our paper [*Probabilistic Weather Forecasting with Hierarchical Graph Neural Networks*](https://arxiv.org/abs/2406.04759), for Limited Area Modeling (LAM).
-In particular, it contains implementations of:
+Ocean dynamics are chaotic, but existing machine-learning ocean models are typically deterministic. Njord produces ensembles of the depth-resolved ocean state, including sea ice, and (in the regional setting) conditions on boundary data from an independent global ocean model.
 
-* Our ensemble forecasting model Graph-EFM.
-* The hierarchical Graph-FM model (also called Hi-LAM in [Oskarsson et al. (2023)](https://arxiv.org/abs/2309.17370) and on the `main` branch).
-* Our re-implementation of GraphCast, by [Lam et al. (2023)](https://arxiv.org/abs/2212.12794).
+The code uses [PyTorch](https://pytorch.org/), [PyTorch Lightning](https://lightning.ai/pytorch-lightning), [PyG](https://pyg.org/), and optional logging through [Weights &amp; Biases](https://wandb.ai/) or [MLflow](https://mlflow.org/).
 
-# Publications
-For a more in-depth scientific introduction to machine learning for LAM weather forecasting see the publications listed here.
-As the code in the repository is continuously evolving, the latest version might feature some small differences to what was used for these publications.
-We retain some paper-specific branches for reproducibility purposes.
+## Njord-Baltic
 
+<p align="middle">
+    <img src="figures/regional_model.png" width="720"/>
+</p>
+<p align="middle">
+    <em>One-step prediction in Njord-Baltic. The same latent-variable GNN is used on a Baltic cluster mesh, with additional lateral boundary forcing <code>B<sup>t−2:t</sup></code> from a global ocean model and atmospheric forcing <code>F<sup>t−2:t</sup></code>.</em>
+</p>
 
-*If you use Neural-LAM in your work, please cite the relevant paper(s)*.
+## Differences to LAM for weather
 
-#### [Graph-based Neural Weather Prediction for Limited Area Modeling](https://arxiv.org/abs/2309.17370)
-```
-@inproceedings{oskarsson2023graphbased,
-    title={Graph-based Neural Weather Prediction for Limited Area Modeling},
-    author={Oskarsson, Joel and Landelius, Tomas and Lindsten, Fredrik},
-    booktitle={NeurIPS 2023 Workshop on Tackling Climate Change with Machine Learning},
-    year={2023}
-}
-```
-See the branch [`ccai_paper_2023`](https://github.com/joeloskarsson/neural-lam/tree/ccai_paper_2023) for a revision of the code that reproduces this workshop paper.
+Neural-LAM is a weather limited-area / global GNN codebase. Njord reuses that stack (encode–process–decode GNNs, Graph-EFM, mllam-data-prep datastores) but changes the parts that matter for the ocean:
 
-#### [Probabilistic Weather Forecasting with Hierarchical Graph Neural Networks](https://arxiv.org/abs/2406.04759)
-```
-@inproceedings{oskarsson2024probabilistic,
-  title = {Probabilistic Weather Forecasting with Hierarchical Graph Neural Networks},
-  author = {Oskarsson, Joel and Landelius, Tomas and Deisenroth, Marc Peter and Lindsten, Fredrik},
-  booktitle = {Advances in Neural Information Processing Systems},
-  volume = {37},
-  year = {2024},
-}
-```
-See the branches [`prob_model_lam`](https://github.com/mllam/neural-lam/tree/prob_model_lam) and [`prob_model_global`](https://github.com/mllam/neural-lam/tree/prob_model_global) for revisions of the code that reproduces this paper.
-The global and probabilistic models from this paper are not yet fully merged with `main` (see issues [62](https://github.com/mllam/neural-lam/issues/62) and [63](https://github.com/mllam/neural-lam/issues/63)).
+* **Land / bathymetry masking.** The GNN runs only on sea grid points. Per-variable masks (surface and depth) drop land and dry bathymetry from the loss and from graph construction.
+* **State variables.** Depth-resolved `thetao`, `so`, `uo`, `vo`, plus surface `zos`/`sla`, sea-ice concentration `siconc` and thickness `sithick`.
+* **Static features.** Bathymetry `deptho`, mean dynamic topography `mdt`, and distance to coast `coast_dist` (plus projected `x_coord`/`y_coord` regionally, or spherical harmonics globally). Coast distance tells the model where the sea surface ends, since mesh nodes are not placed on land.
+* **Sea ice constraints.** Output clamping keeps `siconc ∈ [0, 1]` and `sithick ≥ 0`. An optional **density channel** (Aurora inspired missing-data handling) zeros ice fields in ice-free cells during rollout so small residuals do not accumulate.
+* **Cluster meshes.** Spherical (global) or Euclidean (regional) K-means over sea points, then Delaunay edges with land-crossing filtering — better coverage of bays and straits than a masked icosahedral / quadrilateral mesh.
+* **Extra datastores.** Regional runs add atmosphere and lateral-boundary MDP datasets, plus separate **statistics** datastores for normalisation when the training fields are forecasts rather than the reanalysis used to compute mean/std.
 
 # Modularity
 The Neural-LAM code is designed to modularize the different components involved in training and evaluating neural weather prediction models.
@@ -70,23 +54,11 @@ Still, some restrictions are inevitable:
   <img src="figures/neural_lam_setup.png" width="600"/>
 </p>
 
+# Installation
 
-# Installing Neural-LAM
+Python **3.9–3.12** (`requires-python = ">=3.9,<3.13"`).
 
-When installing `neural-lam` you have a choice of either installing with
-directly `pip` or using the `pdm` package manager.
-We recommend using `pdm` as it makes it easy to add/remove packages while
-keeping versions consistent (it automatically updates the `pyproject.toml`
-file), makes it easy to handle virtual environments and includes the
-development toolchain packages installation too.
-
-**regarding `torch` installation**: because `torch` creates different package
-variants for different CUDA versions and cpu-only support you will need to install
-`torch` separately if you don't want the most recent GPU variant that also
-expects the most recent version of CUDA on your system.
-
-We cover all the installation options in our [github actions ci/cd
-setup](.github/workflows/) which you can use as a reference.
+Install with `pdm` (recommended) or `pip`. Because `torch` ships CUDA- and CPU-specific wheels, install the torch variant you want before the rest of the project if you do not want the default GPU build.
 
 ## Using `pdm`
 
@@ -104,480 +76,266 @@ setup](.github/workflows/) which you can use as a reference.
 2. Install a specific version of `torch` with `python -m pip install torch --index-url https://download.pytorch.org/whl/cpu` for a CPU-only version or `python -m pip install torch --index-url https://download.pytorch.org/whl/cu111` for CUDA 11.1 support (you can find the correct URL for the variant you want on [PyTorch webpage](https://pytorch.org/get-started/locally/)).
 3. Install the dependencies with `python -m pip install .`. If you will be developing `neural-lam` we recommend to install in editable mode and install the development dependencies with `python -m pip install -e ".[dev]"` so you can make changes to the code and see the effects immediately.
 
+# Data
 
-# Using Neural-LAM
+## Sources
 
-Once `neural-lam` is installed you will be able to train/evaluate models. For this you will in general need two things:
+| Role | Typical products | Where to get them |
+| --- | --- | --- |
+| Global ocean reanalysis / analysis | GLORYS12, GLO12 | [Copernicus Marine Data Store](https://data.marine.copernicus.eu/) |
+| Regional Baltic reanalysis / analysis | Baltic Sea Physics Reanalysis and operational analysis | Copernicus Marine |
+| Evaluation vs. operational forecasts and observations | OceanBench tracks | [OceanBench](https://github.com/mercator-ocean/oceanbench) |
+| Atmospheric forcing (training) | ERA5 | Copernicus Climate / ECMWF |
+| Atmospheric forcing (forecast evaluation) | IFS / AIFS | [ECMWF MARS](https://www.ecmwf.int/en/forecasts/datasets), [ECMWF Open Data](https://www.ecmwf.int/en/forecasts/datasets/open-data), [Dynamical](https://dynamical.org/catalog/), [Earth2Studio](https://github.com/NVIDIA/earth2studio) |
+| Regional lateral boundaries at evaluation | GLO12 (or similar) forecasts | OceanBench / Copernicus Marine |
 
-1. **Data to train/evaluate the model**. To represent this data we use a concept of
-   *datastores* in Neural-LAM (see the [Data](#data-the-datastore-and-weatherdataset-classes) section for more details).
-   In brief, a datastore implements the process of loading data from disk in a
-   specific format (for example zarr or numpy files) by implementing an
-   interface that provides the data in a data-structure that can be used within
-   neural-lam. A datastore is used to create a `pytorch.Dataset`-derived
-   class that samples the data in time to create individual samples for
-   training, validation and testing.
+Licensing is set by those providers (Copernicus Marine, ECMWF, OceanBench EUPL-1.2, etc.). See the paper appendix for the product DOIs used in the experiments.
 
-2. **The graph structure** is used to define message-passing GNN layers,
-   that are trained to emulate fluid flow in the atmosphere over time. The
-   graph structure is created for a specific datastore.
+Trained weights from the paper are available on request.
 
-Any command you run in neural-lam will include the path to a configuration file
-to be used (usually called `config.yaml`). This configuration file defines the
-path to the datastore configuration you wish to use and allows you to configure
-different aspects about the training and evaluation of the model.
+## mllam-data-prep
 
-The path you provide to the neural-lam config (`config.yaml`) also sets the
-root directory relative to which all other paths are resolved, as in the parent
-directory of the config becomes the root directory. Both the datastore and
-graphs you generate are then stored in subdirectories of this root directory.
-Exactly how and where a specific datastore expects its source data to be stored
-and where it stores its derived data is up to the implementation of the
-datastore.
+All ocean, atmosphere, and boundary fields used here go through [mllam-data-prep](https://github.com/mllam/mllam-data-prep) into training-ready zarr (stacked variables, flattened `grid_index`, train/val/test splits, normalisation statistics).
 
-In general the folder structure assumed in Neural-LAM is as follows (we will
-assume you placed `config.yaml` in a folder called `data`):
-
-```
-data/
-├── config.yaml           - Configuration file for neural-lam
-├── danra.datastore.yaml  - Configuration file for the datastore, referred to from config.yaml
-└── graphs/               - Directory containing graphs for training
+```bash
+python -m mllam_data_prep --config data/baltic_sea_mdp_config.yaml
 ```
 
-And the content of `config.yaml` could in this case look like:
+The resulting zarr path is derived from the MDP config name (`baltic_sea_mdp_config.yaml` → `baltic_sea_mdp_config.zarr`). Example MDP and Njord YAML files live in [`data/`](data/). **Paths inside those files are machine-specific**; copy and edit them to your stores.
+
+### Masks and static fields
+
+MDP configs declare a `mask` category alongside `state`, `forcing`, and `static`:
+
+* **Surface mask** sea vs land.
+* **Depth mask** per-variable bathymetry.
+* **Static** `deptho`, `mdt`, `coast_dist`, and coordinates.
+
+Loss, metrics, and graph construction all use these masks.
+
+### Njord YAML: several datastores
+
+A Njord config (for example [`data/baltic_sea_forecasts.yaml`](data/baltic_sea_forecasts.yaml)) can name more than one MDP dataset:
+
+| Key | Role |
+| --- | --- |
+| `datastore` | Predicted ocean state (and calendar forcing derived on that grid) |
+| `datastore_boundary` | Lateral ocean boundary forcing (regional only) |
+| `datastore_atmosphere` | Surface atmospheric forcing |
+| `statistics_datastore` | Mean/std (and diff stats) for **normalising the ocean state** |
+| `statistics_datastore_boundary` / `_atmosphere` | Same idea for boundary and atmosphere |
+
+`statistics_*` exist so you can **train or evaluate on forecast-style tensors** (`init_time` × `lead_time`) while still normalising with statistics computed on a long reanalysis / analysis record. Forecast zarrs are too short and too correlated to estimate robust mean/std.
+
+Two Baltic layouts in this repo:
+
+* **[`data/baltic_sea_finetune.yaml`](data/baltic_sea_finetune.yaml)** reanalysis/analysis along a `time` axis. The same MDP configs are used for data and for statistics (no `statistics_*` keys needed).
+* **[`data/baltic_sea_forecasts.yaml`](data/baltic_sea_forecasts.yaml)** operational-style forecasts (`init_time`, `lead_time`) for ocean, GLO12-style boundaries, and AIFS atmosphere, with `statistics_*` pointing at the finetune MDP configs.
+
+Training options in the same YAML:
+
+* `state_feature_weighting` per-variable loss weights (surface vs depth).
+* `output_clamping` physical bounds for sea ice.
+* `density_channel` binary ice-presence channel tied to `siconc` / `sithick`.
+
 ```yaml
 datastore:
   kind: mdp
-  config_path: danra.datastore.yaml
+  config_path: baltic_sea_gt_forecasts_mdp_config.yaml
+datastore_boundary:
+  kind: mdp
+  config_path: baltic_boundary_forecasts_mdp_config.yaml
+datastore_atmosphere:
+  kind: mdp
+  config_path: baltic_aifs_forecasts_mdp_config.yaml
+statistics_datastore:
+  kind: mdp
+  config_path: baltic_sea_ft_mdp_config.yaml
+# ... statistics for boundary and atmosphere ...
 training:
-  state_feature_weighting:
-    __config_class__: ManualStateFeatureWeighting
-    weights:
-      u100m: 1.0
-      v100m: 1.0
-      t2m: 1.0
-      r2m: 1.0
   output_clamping:
-    lower:
-      t2m: 0.0
-      r2m: 0
-    upper:
-      r2m: 1.0
+    upper: { siconc: 1.0 }
+    lower: { siconc: 0.0, sithick: 0.0 }
+  density_channel:
+    reference_var: siconc
+    associated_vars: [siconc, sithick]
 ```
 
-For now the neural-lam config only defines few things:
+The parent directory of the Njord YAML is the run root: graphs are written under `<root>/graphs/<name>/`.
 
-1. The kind of datastore and the path to its config
-2. The weighting of different features in
-the loss function. If you don't define the state feature weighting it will default to
-weighting all features equally.
-3. Valid numerical range for output of each feature.The numerical range of all features default to $]-\infty, \infty[$.
+# Graph creation
 
-(This example is taken from the `tests/datastore_examples/mdp` directory.)
+Mesh files are stored under `graphs/<name>/` next to the datastore. Hierarchical graphs keep per-level lists for mesh edges and features; extra `mesh_up_*` / `mesh_down_*` files connect levels.
 
+## Regional (Baltic) — `create_graph`
 
-Below follows instructions on how to use Neural-LAM to train and evaluate
-models, with details first given for each kind of datastore implemented
-and later the graph generation. Once `neural-lam` has been installed the
-general process is:
-
-1. Run any pre-processing scripts to generate the necessary derived data that your chosen datastore requires
-2. Run graph-creation step
-3. Train the model
-
-## Data (the `DataStore` and `WeatherDataset` classes)
-
-To enable flexibility in what input-data sources can be used with neural-lam,
-the input-data representation is split into two parts:
-
-1. A "datastore" (represented by instances of
-   [neural_lam.datastore.BaseDataStore](neural_lam/datastore/base.py)) which
-   takes care of loading a given category (state, forcing or static) and split
-   (train/val/test) of data from disk and returning it as a `xarray.DataArray`.
-   The returned data-array is expected to have the spatial coordinates
-   flattened into a single `grid_index` dimension and all variables and vertical
-   levels stacked into a feature dimension (named as `{category}_feature`). The
-   datastore also provides information about the number, names and units of
-   variables in the data, the boundary mask, normalisation values and grid
-   information.
-
-2. A `pytorch.Dataset`-derived class (called
-   `neural_lam.weather_dataset.WeatherDataset`) which takes care of sampling in
-   time to create individual samples for training, validation and testing. The
-   `WeatherDataset` class is also responsible for normalising the values and
-   returning `torch.Tensor`-objects.
-
-There are currently two different datastores implemented in the codebase:
-
-1. `neural_lam.datastore.MDPDatastore` which represents loading of
-   *training-ready* datasets in zarr format created with the
-   [mllam-data-prep](https://github.com/mllam/mllam-data-prep) package.
-   Training-ready refers to the fact that this data has been transformed
-   (variables have been stacked, spatial coordinates have been flattened,
-   statistics for normalisation have been calculated, etc) to be ready for
-   training. `mllam-data-prep` can combine any number of datasets that can be
-   read with [xarray](https://github.com/pydata/xarray) and the processing can
-   either be done at run-time or as a pre-processing step before calling
-   neural-lam.
-
-2. `neural_lam.datastore.NpyFilesDatastoreMEPS` which reads MEPS data from
-   `.npy`-files in the format introduced in neural-lam `v0.1.0`. Note that this
-   datastore is specific to the format of the MEPS dataset, but can act as an
-   example for how to create similar numpy-based datastores.
-
-If neither of these options fit your need you can create your own datastore by
-subclassing the `neural_lam.datastore.BaseDataStore` class or
-`neural_lam.datastore.BaseRegularGridDatastore` class (if your data is stored on
-a regular grid) and implementing the abstract methods.
-
-
-### MDP (mllam-data-prep) Datastore - `MDPDatastore`
-
-With `MDPDatastore` (the mllam-data-prep datastore) all the selection,
-transformation and pre-calculation steps that are needed to go from
-for example gridded weather data to a format that is optimised for training
-in neural-lam, are done in a separate package called
-[mllam-data-prep](https://github.com/mllam/mllam-data-prep) rather than in
-neural-lam itself.
-Specifically, the `mllam-data-prep` datastore configuration (for example
-[danra.datastore.yaml](tests/datastore_examples/mdp/danra.datastore.yaml))
-specifies a) what source datasets to read from, b) what variables to select, c)
-what transformations of dimensions and variables to make, d) what statistics to
-calculate (for normalisation) and e) how to split the data into training,
-validation and test sets (see full details about the configuration specification
-in the [mllam-data-prep README](https://github.com/mllam/mllam-data-prep)).
-
-From a datastore configuration `mllam-data-prep` returns the transformed
-dataset as an `xr.Dataset` which is then written in zarr-format to disk by
-`neural-lam` when the datastore is first initiated (the path of the dataset is
-derived from the datastore config, so that from a config named `danra.datastore.yaml` the resulting dataset is stored in `danra.datastore.zarr`).
-You can also run `mllam-data-prep` directly to create the processed dataset by providing the path to the datastore configuration file:
+K-means cluster mesh (or hierarchical / multiscale) on the regional Lambert grid, including optional boundary and atmosphere nodes:
 
 ```bash
-python -m mllam_data_prep --config data/danra.datastore.yaml
+python -m neural_lam.create_graph \
+    --config_path data/baltic_sea.yaml \
+    --name cluster \
+    --type cluster \
+    --levels 3 \
+    --grid_to_first_mesh_refinement 9 \
+    --mesh_refinement_factor 9 \
+    --plot \
+    --connect_disconnected
 ```
 
-If you will be working on a large dataset (on the order of 10GB or more) it
-could be beneficial to produce the processed `.zarr` dataset before using it
-in neural-lam so that you can do the processing across multiple CPU cores in parallel. This is done by including the `--dask-distributed-local-core-fraction` argument when calling mllam-data-prep to set the fraction of your system's CPU cores that should be used for processing (see the
-[mllam-data-prep
-README for details](https://github.com/mllam/mllam-data-prep?tab=readme-ov-file#creating-large-datasets-with-daskdistributed)).
+`--plot` writes overview figures while the graph is built. Paper-style Baltic cluster graphs use refinement 9 (for comparison to a 3×3 quadrilateral coarsening). See `python -m neural_lam.create_graph --help`.
 
-For example:
+## Global — `create_global_graph`
+
+Spherical K-means over sea points, spherical Delaunay edges, land-crossing filter. Types: `cluster` (paper default), `hierarchical` / `multiscale` icosahedral.
 
 ```bash
-python -m mllam_data_prep --config data/danra.datastore.yaml --dask-distributed-local-core-fraction 0.5
+python -m neural_lam.create_global_graph \
+    --config_path data/global_ocean.yaml \
+    --name global_cluster_1_4_deg_20_refinement_3_levels \
+    --type cluster \
+    --levels 3 \
+    --grid_to_first_mesh_refinement 20 \
+    --mesh_refinement_factor 3 \
+    --plot \
+    --connect_disconnected
 ```
 
-### NpyFiles MEPS Datastore - `NpyFilesDatastoreMEPS`
+## Auxiliary graph — `create_auxiliary_graph`
 
-Version `v0.1.0` of Neural-LAM was built to train from numpy-files from the
-MEPS weather forecasts dataset.
-To enable this functionality to live on in later versions of neural-lam we have
-built a datastore called `NpyFilesDatastoreMEPS` which implements functionality
-to read from these exact same numpy-files. At this stage this datastore class
-is very much tied to the MEPS dataset, but the code is written in a way where
-it quite easily could be adapted to work with numpy-based weather
-forecast/analysis files in future.
-
-The full MEPS dataset can be shared with other researchers on request, contact us for this.
-A tiny subset of the data (named `meps_example`) is available in
-`example_data.zip`, which can be downloaded from
-[here](https://liuonline-my.sharepoint.com/:f:/g/personal/joeos82_liu_se/EuiUuiGzFIFHruPWpfxfUmYBSjhqMUjNExlJi9W6ULMZ1w?e=97pnGX).
-
-Download the file and unzip in the neural-lam directory.
-Graphs used in the initial paper are also available for download at the same link (but can as easily be re-generated using `python -m neural_lam.create_graph`).
-Note that this is far too little data to train any useful models, but all pre-processing and training steps can be run with it.
-It should thus be useful to make sure that your python environment is set up correctly and that all the code can be ran without any issues.
-
-The following datastore configuration works with the MEPS dataset:
-
-```yaml
-# meps.datastore.yaml
-dataset:
-  name: meps_example
-  num_forcing_features: 16
-  var_longnames:
-  - pres_heightAboveGround_0_instant
-  - pres_heightAboveSea_0_instant
-  - nlwrs_heightAboveGround_0_accum
-  - nswrs_heightAboveGround_0_accum
-  - r_heightAboveGround_2_instant
-  - r_hybrid_65_instant
-  - t_heightAboveGround_2_instant
-  - t_hybrid_65_instant
-  - t_isobaricInhPa_500_instant
-  - t_isobaricInhPa_850_instant
-  - u_hybrid_65_instant
-  - u_isobaricInhPa_850_instant
-  - v_hybrid_65_instant
-  - v_isobaricInhPa_850_instant
-  - wvint_entireAtmosphere_0_instant
-  - z_isobaricInhPa_1000_instant
-  - z_isobaricInhPa_500_instant
-  var_names:
-  - pres_0g
-  - pres_0s
-  - nlwrs_0
-  - nswrs_0
-  - r_2
-  - r_65
-  - t_2
-  - t_65
-  - t_500
-  - t_850
-  - u_65
-  - u_850
-  - v_65
-  - v_850
-  - wvint_0
-  - z_1000
-  - z_500
-  var_units:
-  - Pa
-  - Pa
-  - W/m\textsuperscript{2}
-  - W/m\textsuperscript{2}
-  - "-"
-  - "-"
-  - K
-  - K
-  - K
-  - K
-  - m/s
-  - m/s
-  - m/s
-  - m/s
-  - kg/m\textsuperscript{2}
-  - m\textsuperscript{2}/s\textsuperscript{2}
-  - m\textsuperscript{2}/s\textsuperscript{2}
-  num_timesteps: 65
-  num_ensemble_members: 2
-  step_length: 3
-  remove_state_features_with_index: [15]
-grid_shape_state:
-- 268
-- 238
-projection:
-  class_name: LambertConformal
-  kwargs:
-    central_latitude: 63.3
-    central_longitude: 15.0
-    standard_parallels:
-    - 63.3
-    - 63.3
-```
-
-Which you can then use in a neural-lam configuration file like this:
-
-```yaml
-# config.yaml
-datastore:
-  kind: npyfilesmeps
-  config_path: meps.datastore.yaml
-training:
-  state_feature_weighting:
-    __config_class__: ManualStateFeatureWeighting
-    values:
-      u100m: 1.0
-      v100m: 1.0
-```
-
-For npy-file based datastores you must separately run the command that creates the variables used for standardization:
+Reuse a **mesh trained at one resolution** and rebuild only **grid–mesh (g2m / m2g)** edges for a new grid. That is how global 1° pretraining is transferred to 0.25° finetuning without changing the mesh processor:
 
 ```bash
-python -m neural_lam.datastore.npyfilesmeps.compute_standardization_stats <path-to-datastore-config>
+python -m neural_lam.create_auxiliary_graph \
+    --config_path data/analysis_ocean.yaml \
+    --name global_cluster_analysis \
+    --name_original global_cluster_1_4_deg_20_refinement_3_levels \
+    --plot \
+    --connect_disconnected
 ```
 
-### Graph creation
+## Plotting graphs
 
-Run `python -m neural_lam.create_mesh` with suitable options to generate the graph you want to use (see `python neural_lam.create_mesh --help` for a list of options).
-The graphs used for the different models in the [paper](#graph-based-neural-weather-prediction-for-limited-area-modeling) can be created as:
+```bash
+# Regional 3D / interactive plot
+python -m neural_lam.plot_graph_3d \
+    --config_path data/baltic_sea.yaml \
+    --graph_name cluster \
+    --save baltic_graph.html
 
-* **GC-LAM**: `python -m neural_lam.create_graph --config_path <neural-lam-config-path> --name multiscale`
-* **Hi-LAM**: `python -m neural_lam.create_graph --config_path <neural-lam-config-path> --name hierarchical --hierarchical` (also works for Hi-LAM-Parallel)
-* **L1-LAM**: `python -m neural_lam.create_graph --config_path <neural-lam-config-path> --name 1level --levels 1`
-
-The graph-related files are stored in a directory called `graphs`.
-
-## Logging your experiments
-
-### Weights & Biases Integration
-The project is fully integrated with [Weights & Biases](https://www.wandb.ai/) (W&B) for logging and visualization, but can just as easily be used without it.
-When W&B is used, training configuration, training/test statistics and plots are sent to the W&B servers and made available in an interactive web interface.
-If W&B is turned off, logging instead saves everything locally to a directory like `wandb/dryrun...`.
-The W&B project name is set to `neural-lam`, but this can be changed in the flags of `python -m neural_lam.train_model` (using argsparse).
-See the [W&B documentation](https://docs.wandb.ai/) for details.
-
-If you would like to login and use W&B, run:
-```
-wandb login
-```
-If you would like to turn off W&B and just log things locally, run:
-```
-wandb off
+# Global
+python -m neural_lam.plot_global_graph_3d \
+    --config_path data/global_ocean.yaml \
+    --graph_name global_cluster_1_4_deg_20_refinement_4_levels \
+    --save global_graph.html
 ```
 
-### MLFlow Integration
-The project is also integrated with [MLFlow](https://mlflow.org/) for logging and storing artefacts.
+# Training
 
-MLFlow is not used by default, but can be switched to by setting `--logger mlflow` in the training command. With MLFlow enabled, training configuration, training/test statistics and plots are logged to the MLFlow server. MLFlow is self-hosted and can be run locally or on a server. See the [MLFlow documentation](https://mlflow.org/docs/latest/index.html) for details.
-
-Use the environment variable `MLFLOW_TRACKING_URI` to set the URI of the MLFlow server. If not set the logging can not be used. An example of setting the URI to a server is and running a training command is `MLFLOW_TRACKING_URI=http://localhost:5000 python -m neural_lam.train_model --config_path <config_path> --logger mlflow`.
-
-## Train Models
-Models can be trained using `python -m neural_lam.train_model --config_path <config_path>`.
-Run `python neural_lam.train_model --help` for a full list of training options.
-A few of the key ones are outlined below:
-
-* `--config_path`: Path to the configuration for neural-lam (for example in `data/myexperiment/config.yaml`).
-* `--model`: Which model to train
-* `--graph`: Which graph to use with the model
-* `--epochs`: Number of epochs to train for
-* `--processor_layers`: Number of GNN layers to use in the processing part of the model
-* `--ar_steps_train`: Number of time steps to unroll for when making predictions and computing the loss
-* `--ar_steps_eval`: Number of time steps to unroll for during validation steps
-
-Checkpoints of trained models are stored in the `saved_models` directory.
-The implemented models are:
-
-### GraphCast
-This is our re-implementation of GraphCast, and really can be used with any type of non-hierarchical graph (not just multi-scale).
-The encode-process-decode framework is used with a mesh graph in order to make one-step pedictions.
-
-To train GraphCast use
-```
-python -m neural_lam.train_model --model graphcast --graph multiscale ...
+```bash
+python -m neural_lam.train_model --config_path data/baltic_sea.yaml --help
 ```
 
-### Graph-FM
-Deterministic graph-based forecasting model that uses a hierarchical mesh graph and performs sequential message passing through the hierarchy during processing.
+Checkpoints go to `saved_models/`. Paper models:
 
-To train Graph-FM use
-```
-python -m neural_lam.train_model --model graph_fm --graph hierarchical ...
-```
+| `--model` | Paper name | Notes |
+| --- | --- | --- |
+| `graph_efm` | **Njord** | Latent-variable ensemble model (ELBO + CRPS) |
+| `graph_fm` | **SeaCast** (deterministic baseline) | Hierarchical GNN, MSE |
+| `graphcast` | GraphCast-style | Non-hierarchical encode–process–decode |
 
-### Graph-EFM
-This is the probabibilistic graph-based ensemble model.
-The same model can be used both with multi-scale and hierarchical graphs, with different behaviour internally.
+Useful flags: `--graph` (directory name under `graphs/`), `--processor_layers`, `--hidden_dim`, `--ar_steps_train` / `--ar_steps_eval`, `--kl_beta`, `--crps_weight`, `--load` (checkpoint), `--eval val` or `--eval test`.
 
-To train Graph-EFM use e.g.
-```
-python -m neural_lam.train_model --model graph_efm --graph multiscale ...
-```
-or
-```
-python -m neural_lam.train_model --model graph_efm --graph hierarchical ...
-```
+## Training curriculum
 
-### High Performance Computing
+Njord is not trained in one job. Typical **Graph-EFM** stages (see also `graph_efm_1.sh`–`graph_efm_4.sh`):
 
-The training script can be run on a cluster with multiple GPU-nodes. Neural LAM is set up to use PyTorch Lightning's `DDP` backend for distributed training.
-The code can be used on systems both with and without slurm. If the cluster has multiple nodes, set the `--num_nodes` argument accordingly.
+1. **Autoencoder** (`--kl_beta 0 --crps_weight 0 --ar_steps_train 1`) — learn to encode/decode; prior unused.
+2. **One-step ELBO** (`--kl_beta 0.1`) — train prior and variational posterior together.
+3. **Unrolled ELBO** (`--ar_steps_train 2`) — temporal consistency.
+4. **CRPS finetune** (`--crps_weight` large, still unrolled) — ensemble spread/calibration.
+5. **Analysis finetune** — same model, switch YAML to analysis (and, globally, to 0.25° via an auxiliary graph). Use `statistics_*` when the tensors are forecasts.
 
-Using SLURM, the job can be started with `sbatch slurm_job.sh` with a shell script like the following.
-```
-#!/bin/bash -l
-#SBATCH --job-name=Neural-LAM
-#SBATCH --time=24:00:00
-#SBATCH --nodes=2
-#SBATCH --ntasks-per-node=4
-#SBATCH --gres:gpu=4
-#SBATCH --partition=normal
-#SBATCH --mem=444G
-#SBATCH --no-requeue
-#SBATCH --exclusive
-#SBATCH --output=lightning_logs/neurallam_out_%j.log
-#SBATCH --error=lightning_logs/neurallam_err_%j.log
+**Global** extra: pretrain at 1°, then finetune at 0.25° (auxiliary graph keeps the mesh). **Regional:** reanalysis curriculum, then a shorter analysis finetune (`baltic_sea_finetune.yaml` vs forecast YAML).
 
-# Load necessary modules or activate environment, for example:
-conda activate neural-lam
+SeaCast uses weighted MSE, then a short autoregressive unroll, then analysis finetune (`seacast_pretrain.sh`, `seacast_finetune.sh`).
 
-srun -ul python -m neural_lam.train_model \
-    --config_path /path/to/config.yaml \
-    --num_nodes $SLURM_JOB_NUM_NODES
+## Evaluation
+
+```bash
+python -m neural_lam.train_model \
+    --config_path data/baltic_sea_forecasts.yaml \
+    --model graph_efm \
+    --graph cluster \
+    --eval test \
+    --load saved_models/<run>/last.ckpt \
+    --ar_steps_eval 10 \
+    --n_example_pred 1
 ```
 
-When using on a system without SLURM, where all GPU's are visible, it is possible to select a subset of GPU's to use for training with the `devices` cli argument, e.g. `--devices 0 1` to use the first 2 GPU's.
+Prefer a **single GPU** for `--eval`: Lightning’s distributed sampler can duplicate samples and bias metrics.
 
-## Evaluate Models
-Evaluation is also done using `python -m neural_lam.train_model --config_path <config-path>`, but using the `--eval` option.
-Use `--eval val` to evaluate the model on the validation set and `--eval test` to evaluate on test data.
-Most of the training options are also relevant for evaluation.
-Some options specifically important for evaluation are:
+# Logging
 
-* `--load`: Path to model checkpoint file (`.ckpt`) to load parameters from
-* `--n_example_pred`: Number of example predictions to plot during evaluation.
-* `--ar_steps_eval`: Number of time steps to unroll for during evaluation
+**Weights &amp; Biases** is our default logger (`wandb login` / `wandb off`).
 
-**Note:** While it is technically possible to use multiple GPUs for running evaluation, this is strongly discouraged. If using multiple devices the `DistributedSampler` will replicate some samples to make sure all devices have the same batch size, meaning that evaluation metrics will be unreliable.
-A possible workaround is to just use batch size 1 during evaluation.
-This issue stems from PyTorch Lightning. See for example [this PR](https://github.com/Lightning-AI/torchmetrics/pull/1886) for more discussion.
+# Multi-GPU / HPC
 
-# Repository Structure
-Except for training and pre-processing scripts all the source code can be found in the `neural_lam` directory.
-Model classes, including abstract base classes, are located in `neural_lam/models`.
-Notebooks for visualization and analysis are located in `docs`.
+PyTorch Lightning **DDP**. On Slurm set `--num_nodes` to `$SLURM_JOB_NUM_NODES`. Without Slurm, `--devices 0 1` selects GPUs. Example job scripts are under `training_scripts/` (they still use site-specific modules and paths).
 
-## Format of graph directory
-The `graphs` directory contains generated graph structures that can be used by different graph-based models.
-The structure is shown with examples below:
+# Repository layout
+
 ```
-graphs
-├── graph1                                  - Directory with a graph definition
-│   ├── m2m_edge_index.pt                   - Edges in mesh graph (neural_lam.create_mesh)
-│   ├── g2m_edge_index.pt                   - Edges from grid to mesh (neural_lam.create_mesh)
-│   ├── m2g_edge_index.pt                   - Edges from mesh to grid (neural_lam.create_mesh)
-│   ├── m2m_features.pt                     - Static features of mesh edges (neural_lam.create_mesh)
-│   ├── g2m_features.pt                     - Static features of grid to mesh edges (neural_lam.create_mesh)
-│   ├── m2g_features.pt                     - Static features of mesh to grid edges (neural_lam.create_mesh)
-│   └── mesh_features.pt                    - Static features of mesh nodes (neural_lam.create_mesh)
-├── graph2
-├── ...
-└── graphN
+neural_lam/           # package (models, datastore, graph construction, training)
+data/                 # example Njord + MDP YAML (Baltic)
+training_scripts/     # staged train commands
+eval_scripts/         # evaluation commands
+graph_scripts/        # graph + auxiliary-graph jobs
+figures/              # README diagrams
+tests/                # pytest
 ```
 
-### Mesh hierarchy format
-To keep track of levels in the mesh graph, a list format is used for the files with mesh graph information.
-In particular, the files
-```
-│   ├── m2m_edge_index.pt                   - Edges in mesh graph (neural_lam.create_mesh)
-│   ├── m2m_features.pt                     - Static features of mesh edges (neural_lam.create_mesh)
-│   ├── mesh_features.pt                    - Static features of mesh nodes (neural_lam.create_mesh)
-```
-all contain lists of length `L`, for a hierarchical mesh graph with `L` layers.
-For non-hierarchical graphs `L == 1` and these are all just singly-entry lists.
-Each entry in the list contains the corresponding edge set or features of that level.
-Note that the first level (index 0 in these lists) corresponds to the lowest level in the hierarchy.
+# Citation
 
-In addition, hierarchical mesh graphs (`L > 1`) feature a few additional files with static data:
-```
-├── graph1
-│   ├── ...
-│   ├── mesh_down_edge_index.pt             - Downward edges in mesh graph (neural_lam.create_mesh)
-│   ├── mesh_up_edge_index.pt               - Upward edges in mesh graph (neural_lam.create_mesh)
-│   ├── mesh_down_features.pt               - Static features of downward mesh edges (neural_lam.create_mesh)
-│   ├── mesh_up_features.pt                 - Static features of upward mesh edges (neural_lam.create_mesh)
-│   ├── ...
-```
-These files have the same list format as the ones above, but each list has length `L-1` (as these edges describe connections between levels).
-Entries 0 in these lists describe edges between the lowest levels 1 and 2.
+If you use this code, please cite **Njord**, and **SeaCast** if you use the deterministic regional/global baseline.
 
-# Development and Contributing
-Any push or Pull-Request to the main branch will trigger a selection of pre-commit hooks.
-These hooks will run a series of checks on the code, like formatting and linting.
-If any of these checks fail the push or PR will be rejected.
-To test whether your code passes these checks before pushing, run
-``` bash
-pre-commit run --all-files
-```
-from the root directory of the repository.
+#### Njord
 
-Furthermore, all tests in the ```tests``` directory will be run upon pushing changes by a github action. Failure in any of the tests will also reject the push/PR.
+```bibtex
+@article{holmberg2026njord,
+  title={Njord: A Probabilistic Graph Neural Network for Ensemble Ocean Forecasting},
+  author={Holmberg, Daniel and Oskarsson, Joel and Wikingsson, Erik and Lindsten, Fredrik and Roos, Teemu},
+  journal={arXiv preprint arXiv:2605.15470},
+  year={2026}
+}
+```
+
+#### SeaCast
+
+```bibtex
+@inproceedings{holmberg2024regional,
+    title={Regional Ocean Forecasting with Hierarchical Graph Neural Networks},
+    author={Holmberg, Daniel and Clementi, Emanuela and Roos, Teemu},
+    booktitle={NeurIPS 2024 Workshop on Tackling Climate Change with Machine Learning},
+    year={2024}
+}
+```
+
+```bibtex
+@article{holmberg2025accurate,
+  title={Accurate Mediterranean Sea forecasting via graph-based deep learning},
+  author={Holmberg, Daniel and Clementi, Emanuela and Epicoco, Italo and Roos, Teemu},
+  journal={Scientific Reports},
+  volume={15},
+  number={1},
+  pages={45051},
+  year={2025}
+}
+```
+
+The architecture builds on Neural-LAM / Graph-EFM ([Oskarsson et al., 2024](https://arxiv.org/abs/2406.04759); [github.com/mllam/neural-lam](https://github.com/mllam/neural-lam)). Cite that work if you rely on the weather GNN / latent-variable design rather than the ocean-specific changes.
 
 # Contact
-If you are interested in machine learning models for LAM, have questions about the implementation or ideas for extending it, feel free to get in touch.
-There is an open [mllam slack channel](https://join.slack.com/t/ml-lam/shared_invite/zt-2t112zvm8-Vt6aBvhX7nYa6Kbj_LkCBQ) that anyone can join (after following the link you have to request to join, this is to avoid spam bots).
-You can also open a github issue on this page, or (if more suitable) send an email to [joel.oskarsson@liu.se](mailto:joel.oskarsson@liu.se).
+
+Questions about Njord: [daniel.holmberg@helsinki.fi](mailto:daniel.holmberg@helsinki.fi).
+
