@@ -338,4 +338,3 @@ The architecture builds on Neural-LAM / Graph-EFM ([Oskarsson et al., 2024](http
 # Contact
 
 Questions about Njord: [daniel.holmberg@helsinki.fi](mailto:daniel.holmberg@helsinki.fi).
-

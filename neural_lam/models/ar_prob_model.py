@@ -659,7 +659,7 @@ class ARProbModel(ARModel):
             plot_dict = {}
             for t_i in time_steps:
                 time_title_part = (
-                    f"t={t_i} ({self._datastore.step_length*t_i} h)"
+                    f"t={t_i} ({self._datastore.step_length * t_i} h)"
                 )
                 var_names_list = self._datastore.get_vars_names("state")
                 var_units_list = self._datastore.get_vars_units("state")

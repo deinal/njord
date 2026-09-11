@@ -711,10 +711,10 @@ def print_graph_stats(save_graphs, pyg_g2m, pyg_m2g):
     if "mesh_up" in save_graphs:
         for lev, g in enumerate(save_graphs["mesh_up"]):
             n_edges = g.edge_index.shape[1]
-            print(f"  mesh_up (level {lev}->{lev+1}): {n_edges} edges")
+            print(f"  mesh_up (level {lev}->{lev + 1}): {n_edges} edges")
         for lev, g in enumerate(save_graphs["mesh_down"]):
             n_edges = g.edge_index.shape[1]
-            print(f"  mesh_down (level {lev+1}->{lev}): {n_edges} edges")
+            print(f"  mesh_down (level {lev + 1}->{lev}): {n_edges} edges")
     n_g2m_nodes = pyg_g2m.num_nodes
     n_g2m_edges = pyg_g2m.edge_index.shape[1]
     print(f"  g2m: {n_g2m_nodes} nodes, {n_g2m_edges} edges")
