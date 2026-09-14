@@ -456,3 +456,30 @@ class DummyDatastore(BaseRegularGridDatastore):
 
         n_points_1d = int(np.sqrt(self.num_grid_points))
         return CartesianGridShape(x=n_points_1d, y=n_points_1d)
+
+    def get_projected_xy(self, category: str, stacked: bool) -> ndarray:
+        """Dummy coordinates are already in the projected CRS."""
+        return self.get_xy(category=category, stacked=stacked)
+
+    def get_mask(self, surface: bool, stacked: bool, invert: bool) -> ndarray:
+        """
+        Mask is false everywhere in this dummy.
+        """
+        n_x = self.grid_shape_state.x
+        n_y = self.grid_shape_state.y
+        n_feat = self.get_num_data_vars("state")
+        sea = np.ones((n_x, n_y), dtype=bool)
+        if surface:
+            mask = sea.reshape(-1) if stacked else sea
+        else:
+            mask = np.repeat(sea[..., None], n_feat, axis=-1)
+            if stacked:
+                mask = mask.reshape(-1, n_feat)
+        if invert:
+            mask = ~mask
+        return mask
+
+    def get_atmosphere_mask(
+        self, stacked: bool = True, invert: bool = False
+    ) -> ndarray:
+        return self.get_mask(surface=True, stacked=stacked, invert=invert)

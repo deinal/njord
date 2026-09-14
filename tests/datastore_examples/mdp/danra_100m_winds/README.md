@@ -1,5 +1,8 @@
-# Cropped DANRA test dataset
+# Cropped DANRA MDP example
 
-The `danra.datastore.yaml` datastore config file in this directory points to a cropped version of DANRA. It was designed to be coincident in time and space with the npyfiles MEPS example dataset. The cropped domain is approximately 100x100 grid points centered on Copenhagen, Denmark. The time spans the first 2 weeks of April 2022.
+This directory contains an [mllam-data-prep](https://github.com/mllam/mllam-data-prep)
+config for a small DANRA weather extract (used historically with Neural-LAM).
 
-See https://github.com/mllam/mllam-testdata/tree/2025-02-05 for further details.
+Njord CI does **not** run against this dataset: the ocean models need per-variable
+bathymetry masks that this example does not provide, and the npy/MEPS datastore
+has been removed. Tests use `tests/dummy_datastore.py` instead.

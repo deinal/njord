@@ -1,57 +1,27 @@
-# Standard library
-from pathlib import Path
-
 # Third-party
 import torch
 
 # First-party
 from neural_lam import config as nlconfig
-from neural_lam.create_graph import create_graph_from_datastore
-from neural_lam.datastore.mdp import MDPDatastore
 from neural_lam.models.graphcast import GraphCast
-from tests.conftest import init_datastore_example
+from tests.conftest import DummyModelArgs, create_test_graph
 
 
-def test_clamping():
-    datastore = init_datastore_example(MDPDatastore.SHORT_NAME)
-
+def test_clamping(datastore):
     graph_name = "1level"
+    create_test_graph(datastore, name=graph_name)
 
-    graph_dir_path = Path(datastore.root_path) / "graph" / graph_name
-
-    if not graph_dir_path.exists():
-        create_graph_from_datastore(
-            datastore=datastore,
-            output_root_path=str(graph_dir_path),
-            n_max_levels=1,
-        )
-
-    class ModelArgs:
-        output_std = False
-        loss = "mse"
-        restore_opt = False
-        n_example_pred = 1
-        graph = graph_name
-        hidden_dim = 4
-        hidden_layers = 1
-        processor_layers = 2
-        mesh_aggr = "sum"
-        lr = 1.0e-3
-        val_steps_to_log = [1, 3]
-        metrics_watch = []
-        num_past_forcing_steps = 1
-        num_future_forcing_steps = 1
-
-    model_args = ModelArgs()
+    model_args = DummyModelArgs()
+    model_args.graph = graph_name
 
     config = nlconfig.NeuralLAMConfig(
         datastore=nlconfig.DatastoreSelection(
-            kind=datastore.SHORT_NAME, config_path=datastore.root_path
+            kind=datastore.SHORT_NAME, config_path=str(datastore.root_path)
         ),
         training=nlconfig.TrainingConfig(
             output_clamping=nlconfig.OutputClamping(
-                lower={"t2m": 0.0, "r2m": 0.0},
-                upper={"r2m": 1.0, "u100m": 100.0},
+                lower={"state_feat_0": 0.0, "state_feat_1": 0.0},
+                upper={"state_feat_1": 1.0, "state_feat_2": 100.0},
             )
         ),
     )
@@ -59,6 +29,8 @@ def test_clamping():
     model = GraphCast(
         args=model_args,
         datastore=datastore,
+        datastore_boundary=None,
+        datastore_atmosphere=None,
         config=config,
     )
 
@@ -88,7 +60,7 @@ def test_clamping():
     # Make predictions towards bounds for each feature
     prediction = zero_prediction.clone()
     n_loops = 100
-    for i in range(n_loops):
+    for _ in range(n_loops):
         prediction = model.get_clamped_new_state(delta, prediction)
 
     # check that unclamped states are as expected
@@ -226,7 +198,7 @@ def test_clamping():
     # Make predictions towards bounds for each feature
     prediction = zero_prediction.clone()
     n_loops = 100
-    for i in range(n_loops):
+    for _ in range(n_loops):
         prediction = model.get_clamped_new_state(-delta, prediction)
 
     # Check that clamped states are within bounds

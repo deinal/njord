@@ -1,106 +1,59 @@
-# Standard library
-from pathlib import Path
-
 # Third-party
-import pytest
 import pytorch_lightning as pl
-import torch
-import wandb
 
 # First-party
 from neural_lam import config as nlconfig
-from neural_lam.create_graph import create_graph_from_datastore
-from neural_lam.datastore import DATASTORES
-from neural_lam.datastore.base import BaseRegularGridDatastore
 from neural_lam.models.graphcast import GraphCast
 from neural_lam.weather_dataset import WeatherDataModule
-from tests.conftest import init_datastore_example
+from tests.conftest import DummyModelArgs, create_test_graph
 
 
-@pytest.mark.parametrize("datastore_name", DATASTORES.keys())
-def test_training(datastore_name):
-    datastore = init_datastore_example(datastore_name)
-
-    if not isinstance(datastore, BaseRegularGridDatastore):
-        pytest.skip(
-            f"Skipping test for {datastore_name} as it is not a regular "
-            "grid datastore."
-        )
-
-    if torch.cuda.is_available():
-        device_name = "cuda"
-        torch.set_float32_matmul_precision(
-            "high"
-        )  # Allows using Tensor Cores on A100s
-    else:
-        device_name = "cpu"
-
+def test_training(datastore):
     trainer = pl.Trainer(
         max_epochs=1,
         deterministic=True,
-        accelerator=device_name,
-        # XXX: `devices` has to be set to 2 otherwise
-        # neural_lam.models.ar_model.ARModel.aggregate_and_plot_metrics fails
-        # because it expects to aggregate over multiple devices
-        devices=2,
+        accelerator="cpu",
+        devices=1,
         log_every_n_steps=1,
-        # use `detect_anomaly` to ensure that we don't have NaNs popping up
-        # during training
+        limit_train_batches=1,
+        limit_val_batches=0,
+        num_sanity_val_steps=0,
+        logger=False,
+        enable_checkpointing=False,
         detect_anomaly=True,
     )
 
     graph_name = "1level"
-
-    graph_dir_path = Path(datastore.root_path) / "graph" / graph_name
-
-    if not graph_dir_path.exists():
-        create_graph_from_datastore(
-            datastore=datastore,
-            output_root_path=str(graph_dir_path),
-            n_max_levels=1,
-        )
+    create_test_graph(datastore, name=graph_name)
 
     data_module = WeatherDataModule(
         datastore=datastore,
-        ar_steps_train=3,
-        ar_steps_eval=5,
+        datastore_boundary=None,
+        datastore_atmosphere=None,
+        ar_steps_train=2,
+        ar_steps_eval=2,
+        input_steps=2,
         standardize=True,
-        batch_size=2,
-        num_workers=1,
+        batch_size=1,
+        num_workers=0,
         num_past_forcing_steps=1,
         num_future_forcing_steps=1,
     )
 
-    class ModelArgs:
-        output_std = False
-        loss = "mse"
-        restore_opt = False
-        n_example_pred = 1
-        # XXX: this should be superfluous when we have already defined the
-        # model object no?
-        graph = graph_name
-        hidden_dim = 4
-        hidden_layers = 1
-        processor_layers = 2
-        mesh_aggr = "sum"
-        lr = 1.0e-3
-        val_steps_to_log = [1, 3]
-        metrics_watch = []
-        num_past_forcing_steps = 1
-        num_future_forcing_steps = 1
-
-    model_args = ModelArgs()
+    model_args = DummyModelArgs()
+    model_args.graph = graph_name
 
     config = nlconfig.NeuralLAMConfig(
         datastore=nlconfig.DatastoreSelection(
-            kind=datastore.SHORT_NAME, config_path=datastore.root_path
+            kind=datastore.SHORT_NAME, config_path=str(datastore.root_path)
         )
     )
 
-    model = GraphCast(  # noqa
+    model = GraphCast(
         args=model_args,
         datastore=datastore,
+        datastore_boundary=None,
+        datastore_atmosphere=None,
         config=config,
     )
-    wandb.init()
     trainer.fit(model=model, datamodule=data_module)

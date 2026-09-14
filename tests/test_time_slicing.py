@@ -29,6 +29,17 @@ class SinglePointDummyDatastore(BaseDatastore):
     def get_num_data_vars(self, category):
         return 1
 
+    def get_mask(self, surface, stacked, invert):
+        n = self.num_grid_points
+        n_feat = self.get_num_data_vars("state")
+        if surface:
+            mask = np.ones(n, dtype=bool)
+        else:
+            mask = np.ones((n, n_feat), dtype=bool)
+        if invert:
+            mask = ~mask
+        return mask
+
     def get_dataarray(self, category, split):
         if category == "state":
             values = self._state_data
@@ -93,7 +104,10 @@ def test_time_slicing_analysis(
 
     dataset = WeatherDataset(
         datastore=datastore,
+        datastore_boundary=None,
+        datastore_atmosphere=None,
         ar_steps=ar_steps,
+        input_steps=2,
         num_future_forcing_steps=num_future_forcing_steps,
         num_past_forcing_steps=num_past_forcing_steps,
         standardize=False,
@@ -101,7 +115,7 @@ def test_time_slicing_analysis(
 
     sample = dataset[0]
 
-    init_states, target_states, forcing, _ = [
+    init_states, target_states, forcing, _boundary, _atmosphere, _times = [
         tensor.numpy() for tensor in sample
     ]
 

@@ -572,18 +572,23 @@ def create_graph(
 
 def create_graph_from_datastore(
     datastore: BaseRegularGridDatastore,
-    datastore_boundary: BaseRegularGridDatastore,
-    datastore_atmosphere: BaseRegularGridDatastore,
+    datastore_boundary: BaseRegularGridDatastore | None,
+    datastore_atmosphere: BaseRegularGridDatastore | None,
     use_atmosphere_g2m: bool,
     **kwargs,
 ):
     interior_mask = datastore.get_mask(surface=True, stacked=True, invert=False)
     xy_interior = datastore.get_projected_xy("state", stacked=True)
 
-    boundary_mask = datastore_boundary.get_mask(
-        surface=True, stacked=True, invert=False
-    )
-    xy_boundary = datastore_boundary.get_projected_xy("forcing", stacked=True)
+    if datastore_boundary is not None:
+        boundary_mask = datastore_boundary.get_mask(
+            surface=True, stacked=True, invert=False
+        )
+        xy_boundary = datastore_boundary.get_projected_xy(
+            "forcing", stacked=True
+        )[boundary_mask]
+    else:
+        xy_boundary = np.empty((0, 2), dtype=xy_interior.dtype)
 
     if use_atmosphere_g2m:
         atmosphere_mask = datastore_atmosphere.get_atmosphere_mask(
@@ -599,9 +604,7 @@ def create_graph_from_datastore(
     create_graph(
         xy=xy_interior[interior_mask],
         xy_land=xy_interior[~interior_mask],  # Coordinates of land points
-        xy_boundary=xy_boundary[
-            boundary_mask
-        ],  # Only encode from these additional grid nodes
+        xy_boundary=xy_boundary,
         xy_atmosphere=xy_atmosphere,
         use_atmosphere_g2m=use_atmosphere_g2m,
         **kwargs,

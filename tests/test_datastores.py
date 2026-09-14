@@ -1,37 +1,4 @@
-"""List of methods and attributes that should be implemented in a subclass of
-`` (these are all decorated with `@abc.abstractmethod`):
-
-- `root_path` (property): Root path of the datastore.
-- `step_length` (property): Length of the time step in hours.
-- `grid_shape_state` (property): Shape of the grid for the state variables.
-- `get_xy` (method): Return the x, y coordinates of the dataset.
-- `coords_projection` (property): Projection object for the coordinates.
-- `get_vars_units` (method): Get the units of the variables in the given
-      category.
-- `get_vars_names` (method): Get the names of the variables in the given
-      category.
-- `get_vars_long_names` (method): Get the long names of the variables in
-      the given category.
-- `get_num_data_vars` (method): Get the number of data variables in the
-      given category.
-- `get_normalization_dataarray` (method): Return the normalization
-      dataarray for the given category.
-- `get_dataarray` (method): Return the processed data (as a single
-      `xr.DataArray`) for the given category and test/train/val-split.
-- `boundary_mask` (property): Return the boundary mask for the dataset,
-      with spatial dimensions stacked.
-- `config` (property): Return the configuration of the datastore.
-
-In addition BaseRegularGridDatastore must have the following methods and
-attributes:
-- `get_xy_extent` (method): Return the extent of the x, y coordinates for a
-        given category of data.
-- `get_xy` (method): Return the x, y coordinates of the dataset.
-- `coords_projection` (property): Projection object for the coordinates.
-- `grid_shape_state` (property): Shape of the grid for the state variables.
-- `stack_grid_coords` (method): Stack the grid coordinates of the dataset
-
-"""
+"""Checks that DummyDatastore implements the BaseRegularGridDatastore API."""
 
 # Standard library
 import collections
@@ -46,52 +13,31 @@ import torch
 import xarray as xr
 
 # First-party
-from neural_lam.datastore import DATASTORES
-from neural_lam.datastore.base import BaseRegularGridDatastore
 from neural_lam.datastore.plot_example import plot_example_from_datastore
-from tests.conftest import init_datastore_example
 
 
-@pytest.mark.parametrize("datastore_name", DATASTORES.keys())
-def test_root_path(datastore_name):
+def test_root_path(datastore):
     """Check that the `datastore.root_path` property is implemented."""
-    datastore = init_datastore_example(datastore_name)
     assert isinstance(datastore.root_path, Path)
 
 
-@pytest.mark.parametrize("datastore_name", DATASTORES.keys())
-def test_config(datastore_name):
+def test_config(datastore):
     """Check that the `datastore.config` property is implemented."""
-    datastore = init_datastore_example(datastore_name)
-    # check the config is a mapping or a dataclass
     config = datastore.config
     assert isinstance(
         config, collections.abc.Mapping
     ) or dataclasses.is_dataclass(config)
 
 
-@pytest.mark.parametrize("datastore_name", DATASTORES.keys())
-def test_step_length(datastore_name):
+def test_step_length(datastore):
     """Check that the `datastore.step_length` property is implemented."""
-    datastore = init_datastore_example(datastore_name)
     step_length = datastore.step_length
     assert isinstance(step_length, int)
     assert step_length > 0
 
 
-@pytest.mark.parametrize("datastore_name", DATASTORES.keys())
-def test_datastore_grid_xy(datastore_name):
-    """Use the `datastore.get_xy` method to get the x, y coordinates of the
-    dataset and check that the shape is correct against the `da
-    tastore.grid_shape_state` property."""
-    datastore = init_datastore_example(datastore_name)
-
-    if not isinstance(datastore, BaseRegularGridDatastore):
-        pytest.skip(
-            "Skip grid_shape_state test for non-regular grid datastores"
-        )
-
-    # check the shapes of the xy grid
+def test_datastore_grid_xy(datastore):
+    """Check `get_xy` shape against `grid_shape_state`."""
     grid_shape = datastore.grid_shape_state
     nx, ny = grid_shape.x, grid_shape.y
     for stacked in [True, False]:
@@ -102,8 +48,7 @@ def test_datastore_grid_xy(datastore_name):
             assert xy.shape == (nx, ny, 2)
 
 
-@pytest.mark.parametrize("datastore_name", DATASTORES.keys())
-def test_get_vars(datastore_name):
+def test_get_vars(datastore):
     """Check that results of.
 
     - `datastore.get_vars_units`
@@ -115,8 +60,6 @@ def test_get_vars(datastore_name):
     return types of each are correct.
 
     """
-    datastore = init_datastore_example(datastore_name)
-
     for category in ["state", "forcing", "static"]:
         units = datastore.get_vars_units(category)
         names = datastore.get_vars_names(category)
@@ -130,12 +73,9 @@ def test_get_vars(datastore_name):
         assert isinstance(num_vars, int)
 
 
-@pytest.mark.parametrize("datastore_name", DATASTORES.keys())
-def test_get_normalization_dataarray(datastore_name):
+def test_get_normalization_dataarray(datastore):
     """Check that the `datastore.get_normalization_dataarray` method is
     implemented."""
-    datastore = init_datastore_example(datastore_name)
-
     for category in ["state", "forcing", "static"]:
         ds_stats = datastore.get_standardization_dataarray(category=category)
 
@@ -164,16 +104,12 @@ def test_get_normalization_dataarray(datastore_name):
             assert set(da_val.dims) == {f"{category}_feature"}
 
 
-@pytest.mark.parametrize("datastore_name", DATASTORES.keys())
-def test_get_dataarray(datastore_name):
+def test_get_dataarray(datastore):
     """Check that the `datastore.get_dataarray` method is implemented.
 
     And that it returns an xarray DataArray with the correct dimensions.
 
     """
-
-    datastore = init_datastore_example(datastore_name)
-
     for category in ["state", "forcing", "static"]:
         n_features = {}
         if category in ["state", "forcing"]:
@@ -200,17 +136,12 @@ def test_get_dataarray(datastore_name):
                 # assume that only state variables change with ensemble members
                 expected_dims.append("ensemble_member")
 
-            # XXX: for now we only have a single attribute to get the shape of
-            # the grid which uses the shape from the "state" category, maybe
-            # this should change?
-
             da = datastore.get_dataarray(category=category, split=split)
 
             assert isinstance(da, xr.DataArray)
             assert set(da.dims) == set(expected_dims)
-            if isinstance(datastore, BaseRegularGridDatastore):
-                grid_shape = datastore.grid_shape_state
-                assert da.grid_index.size == grid_shape.x * grid_shape.y
+            grid_shape = datastore.grid_shape_state
+            assert da.grid_index.size == grid_shape.x * grid_shape.y
 
             n_features[split] = da[category + "_feature"].size
 
@@ -218,11 +149,9 @@ def test_get_dataarray(datastore_name):
         assert n_features["train"] == n_features["val"] == n_features["test"]
 
 
-@pytest.mark.parametrize("datastore_name", DATASTORES.keys())
-def test_boundary_mask(datastore_name):
+def test_boundary_mask(datastore):
     """Check that the `datastore.boundary_mask` property is implemented and
     that the returned object is an xarray DataArray with the correct shape."""
-    datastore = init_datastore_example(datastore_name)
     da_mask = datastore.boundary_mask
 
     assert isinstance(da_mask, xr.DataArray)
@@ -232,20 +161,13 @@ def test_boundary_mask(datastore_name):
     assert da_mask.sum() > 0
     assert da_mask.sum() < da_mask.size
 
-    if isinstance(datastore, BaseRegularGridDatastore):
-        grid_shape = datastore.grid_shape_state
-        assert datastore.boundary_mask.size == grid_shape.x * grid_shape.y
+    grid_shape = datastore.grid_shape_state
+    assert datastore.boundary_mask.size == grid_shape.x * grid_shape.y
 
 
-@pytest.mark.parametrize("datastore_name", DATASTORES.keys())
-def test_get_xy_extent(datastore_name):
+def test_get_xy_extent(datastore):
     """Check that the `datastore.get_xy_extent` method is implemented and that
     the returned object is a tuple of the correct length."""
-    datastore = init_datastore_example(datastore_name)
-
-    if not isinstance(datastore, BaseRegularGridDatastore):
-        pytest.skip("Datastore does not implement `BaseCartesianDatastore`")
-
     extents = {}
     # get the extents for each category, and finally check they are all the same
     for category in ["state", "forcing", "static"]:
@@ -260,14 +182,8 @@ def test_get_xy_extent(datastore_name):
         assert extents["state"] == extents[category]
 
 
-@pytest.mark.parametrize("datastore_name", DATASTORES.keys())
-def test_get_xy(datastore_name):
+def test_get_xy(datastore):
     """Check that the `datastore.get_xy` method is implemented."""
-    datastore = init_datastore_example(datastore_name)
-
-    if not isinstance(datastore, BaseRegularGridDatastore):
-        pytest.skip("Datastore does not implement `BaseCartesianDatastore`")
-
     for category in ["state", "forcing", "static"]:
         xy_stacked = datastore.get_xy(category=category, stacked=True)
         xy_unstacked = datastore.get_xy(category=category, stacked=False)
@@ -289,41 +205,21 @@ def test_get_xy(datastore_name):
         assert xy_unstacked.shape[2] == 2
 
 
-@pytest.mark.parametrize("datastore_name", DATASTORES.keys())
-def test_get_projection(datastore_name):
+def test_get_projection(datastore):
     """Check that the `datastore.coords_projection` property is implemented."""
-    datastore = init_datastore_example(datastore_name)
-
-    if not isinstance(datastore, BaseRegularGridDatastore):
-        pytest.skip("Datastore does not implement `BaseCartesianDatastore`")
-
     assert isinstance(datastore.coords_projection, ccrs.Projection)
 
 
-@pytest.mark.parametrize("datastore_name", DATASTORES.keys())
-def get_grid_shape_state(datastore_name):
+def test_grid_shape_state(datastore):
     """Check that the `datastore.grid_shape_state` property is implemented."""
-    datastore = init_datastore_example(datastore_name)
-
-    if not isinstance(datastore, BaseRegularGridDatastore):
-        pytest.skip("Datastore does not implement `BaseCartesianDatastore`")
-
     grid_shape = datastore.grid_shape_state
-    assert isinstance(grid_shape, tuple)
-    assert len(grid_shape) == 2
-    assert all(isinstance(e, int) for e in grid_shape)
-    assert all(e > 0 for e in grid_shape)
+    assert grid_shape.x > 0
+    assert grid_shape.y > 0
 
 
-@pytest.mark.parametrize("datastore_name", DATASTORES.keys())
 @pytest.mark.parametrize("category", ["state", "forcing", "static"])
-def test_stacking_grid_coords(datastore_name, category):
+def test_stacking_grid_coords(datastore, category):
     """Check that the `datastore.stack_grid_coords` method is implemented."""
-    datastore = init_datastore_example(datastore_name)
-
-    if not isinstance(datastore, BaseRegularGridDatastore):
-        pytest.skip("Datastore does not implement `BaseCartesianDatastore`")
-
     da_static = datastore.get_dataarray(category=category, split="train")
 
     da_static_unstacked = datastore.unstack_grid_coords(da_static).load()
@@ -333,9 +229,7 @@ def test_stacking_grid_coords(datastore_name, category):
     xr.testing.assert_equal(da_static, da_static_test)
 
 
-@pytest.mark.parametrize("datastore_name", DATASTORES.keys())
-def test_dataarray_shapes(datastore_name):
-    datastore = init_datastore_example(datastore_name)
+def test_dataarray_shapes(datastore):
     static_da = datastore.get_dataarray("static", split=None)
     static_da = datastore.stack_grid_coords(static_da)
     static_da = static_da.isel(static_feature=0)
@@ -371,10 +265,8 @@ def test_dataarray_shapes(datastore_name):
     assert torch.allclose(diff, torch.zeros_like(diff), atol=1e-6)
 
 
-@pytest.mark.parametrize("datastore_name", DATASTORES.keys())
-def test_plot_example_from_datastore(datastore_name):
+def test_plot_example_from_datastore(datastore):
     """Check that the `plot_example_from_datastore` function is implemented."""
-    datastore = init_datastore_example(datastore_name)
     fig = plot_example_from_datastore(
         category="static",
         datastore=datastore,
@@ -389,12 +281,10 @@ def test_plot_example_from_datastore(datastore_name):
     assert fig.get_axes()
 
 
-@pytest.mark.parametrize("datastore_name", DATASTORES.keys())
 @pytest.mark.parametrize("category", ("state", "static"))
-def test_get_standardized_da(datastore_name, category):
+def test_get_standardized_da(datastore, category):
     """Check that dataarray is actually standardized when calling
     get_dataarray with standardize=True"""
-    datastore = init_datastore_example(datastore_name)
     ds_stats = datastore.get_standardization_dataarray(category=category)
 
     mean = ds_stats[f"{category}_mean"]

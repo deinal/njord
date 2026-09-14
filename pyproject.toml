@@ -1,14 +1,15 @@
 [project]
-name = "neural-lam"
+name = "njord"
 dynamic = ["version"]
-description = "LAM-based data-driven forecasting"
+description = "A probabilistic graph neural network for ensemble ocean forecasting"
 authors = [
-    { name = "Joel Oskarsson", email = "joel.oskarsson@liu.se" },
+    { name = "Joel Oskarsson", email = "joel.oskarsson@outlook.com" },
     { name = "Simon Adamov", email = "Simon.Adamov@meteoswiss.ch" },
     { name = "Leif Denby", email = "lcd@dmi.dk" },
     { name = "Simon Kamuk Christiansen", email = "skc@dmi.dk" },
     { name = "Kasper Hintz", email = "kah@dmi.dk" },
-    { name = "Erik Larsson", email = "erik.larsson@liu.se" },
+    { name = "Erik Wikingsson", email = "erik.wikingsson@gmail.com" },
+    { name = "Daniel Holmberg", email = "daniel.holmberg@helsinki.fi" },
 ]
 
 # PEP 621 project metadata
@@ -41,6 +42,9 @@ dev = ["pre-commit>=3.8.0", "pytest>=8.3.2", "pooch>=1.8.2"]
 
 [tool.setuptools]
 py-modules = ["neural_lam"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
 [tool.black]
 line-length = 80

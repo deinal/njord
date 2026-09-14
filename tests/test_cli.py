@@ -1,5 +1,7 @@
 # First-party
 import neural_lam
+import neural_lam.create_auxiliary_graph
+import neural_lam.create_global_graph
 import neural_lam.create_graph
 import neural_lam.train_model
 
@@ -9,4 +11,6 @@ def test_import():
     eventually we should test their execution too."""
     assert neural_lam is not None
     assert neural_lam.create_graph is not None
+    assert neural_lam.create_global_graph is not None
+    assert neural_lam.create_auxiliary_graph is not None
     assert neural_lam.train_model is not None

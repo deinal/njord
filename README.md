@@ -1,5 +1,6 @@
 [![arXiv](https://img.shields.io/badge/arXiv-2605.15470-b31b1b.svg)](https://arxiv.org/abs/2605.15470)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.txt)
+[![Linting](https://github.com/deinal/njord/actions/workflows/pre-commit.yml/badge.svg?branch=main)](https://github.com/deinal/njord/actions/workflows/pre-commit.yml)
+[![Tests](https://github.com/deinal/njord/actions/workflows/install-and-test.yml/badge.svg?branch=main)](https://github.com/deinal/njord/actions/workflows/install-and-test.yml)
 
 # Njord
 
