@@ -22,7 +22,7 @@ DATASTORES[DummyDatastore.SHORT_NAME] = DummyDatastore
 @pytest.fixture
 def datastore():
     """Small in-memory grid so graph creation stays fast in CI."""
-    return DummyDatastore(n_grid_points=64, n_timesteps=16)
+    return DummyDatastore(n_grid_points=256, n_timesteps=16)
 
 
 def create_test_graph(
@@ -46,7 +46,7 @@ def create_test_graph(
         g2m_radius=0.67,
         g2m_radius_boundary=0.67,
         g2m_radius_atm=0.67,
-        mesh_node_distance=50_000.0,
+        mesh_node_distance=25_000.0,
         mesh_refinement_factor=4,
         grid_to_first_mesh_refinement=4,
         n_max_levels=n_max_levels,

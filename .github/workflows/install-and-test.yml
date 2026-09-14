@@ -1,6 +1,6 @@
-# CPU tests for Njord. Install a CPU torch wheel first, then the package,
+# Tests for Njord. Install a CPU torch wheel first, then the package,
 # so CI does not pull a CUDA build.
-name: CPU testing
+name: Tests
 
 on:
   push:

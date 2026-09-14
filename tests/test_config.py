@@ -60,10 +60,10 @@ manual_weights_config = nlconfig.NeuralLAMConfig(
     ),
 )
 
-yaml_samples = zip(
-    [yaml_training_defaults, yaml_training_manual_weights],
-    [default_config, manual_weights_config],
-)
+yaml_samples = [
+    (yaml_training_defaults, default_config),
+    (yaml_training_manual_weights, manual_weights_config),
+]
 
 
 @pytest.mark.parametrize("yaml_str, config_expected", yaml_samples)

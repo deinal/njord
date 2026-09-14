@@ -107,7 +107,7 @@ def test_dataset_item_create_dataarray_from_tensor(datastore):
         da_target_times_true,
     ) = dataset._build_item_dataarrays(idx=idx)
 
-    target_times = np.array(target_times_arr, dtype="datetime64[ns]")
+    target_times = target_times_arr.numpy().astype("datetime64[ns]")
     np.testing.assert_equal(target_times, da_target_times_true.values)
 
     da_target = dataset.create_dataarray_from_tensor(

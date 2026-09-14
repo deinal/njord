@@ -90,9 +90,9 @@ def test_time_slicing_analysis(
     ar_steps, num_past_forcing_steps, num_future_forcing_steps
 ):
     # state and forcing variables have only on dimension, `time`
-    time_values = np.datetime64("2020-01-01") + np.arange(
-        len(ANALYSIS_STATE_VALUES)
-    )
+    time_values = (
+        np.datetime64("2020-01-01") + np.arange(len(ANALYSIS_STATE_VALUES))
+    ).astype("datetime64[ns]")
     assert len(ANALYSIS_STATE_VALUES) == len(FORCING_VALUES) == len(time_values)
 
     datastore = SinglePointDummyDatastore(
