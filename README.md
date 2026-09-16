@@ -19,6 +19,9 @@ Mesh construction uses spherical or Euclidean k-means over sea points with Delau
 <p align="middle">
     <em>One-step prediction in Njord. Two previous ocean states and atmospheric forcing are encoded onto a hierarchical mesh over sea points only. A latent variable <code>Z<sup>t</sup></code> is injected in the GNN processor; the decoder maps back to the grid and adds a residual to <code>X<sup>t−1</sup></code>, producing a sample from the one-step forecast distribution.</em>
 </p>
+
+---
+
 <p align="middle">
     <img src="figures/regional_model.png" width="720"/>
 </p>
@@ -40,7 +43,7 @@ Mesh construction uses spherical or Euclidean k-means over sea points with Delau
 }
 ```
 
-#### [Accurate Mediterranean Sea forecasting via graph-based deep learning](https://www.nature.com/articles/s41598-025-28663-6)
+#### [Accurate Mediterranean Sea forecasting via graph-based deep learning](https://www.nature.com/articles/s41598-025-31177-w)
 ```
 @article{holmberg2025accurate,
   title={Accurate Mediterranean Sea forecasting via graph-based deep learning},

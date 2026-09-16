@@ -23,8 +23,8 @@ class DummyDatastore(BaseRegularGridDatastore):
     """
     Datastore that creates some dummy data for testing purposes. The data
     consists of state, forcing, and static variables, and is stored in a
-    regular grid (using Lambert Azimuthal Equal Area projection). The domain
-    is centered on Denmark and has a size of 500x500 km.
+    regular Lambert Conformal grid over the Baltic Sea (500x500 km, centered
+    at 20°E, 60°N).
     """
 
     SHORT_NAME = "dummydata"
@@ -32,8 +32,6 @@ class DummyDatastore(BaseRegularGridDatastore):
     N_FEATURES = dict(state=5, forcing=2, static=1)
     CARTESIAN_COORDS = ["x", "y"]
 
-    # center the domain on Denmark
-    latlon_center = [56, 10]  # latitude, longitude
     bbox_size_km = [500, 500]  # km
 
     def __init__(
@@ -62,14 +60,14 @@ class DummyDatastore(BaseRegularGridDatastore):
             n_points_1d * n_points_1d == n_grid_points
         ), "n_grid_points must be a perfect square"
 
-        # create equal area grid
+        # create projected grid (origin at 20°E, 60°N)
         lx, ly = self.bbox_size_km
         x = np.linspace(-lx / 2.0 * 1.0e3, lx / 2.0 * 1.0e3, n_points_1d)
         y = np.linspace(-ly / 2.0 * 1.0e3, ly / 2.0 * 1.0e3, n_points_1d)
 
         xs, ys = np.meshgrid(x, y)
 
-        # Create lat/lon coordinates using equal area projection
+        # Create lat/lon coordinates from the Lambert grid
         lon_mesh, lat_mesh = (
             ccrs.PlateCarree()
             .transform_points(
@@ -425,10 +423,13 @@ class DummyDatastore(BaseRegularGridDatastore):
             The projection object.
 
         """
-        # make a projection centered on Denmark
-        lat_center, lon_center = self.latlon_center
-        return ccrs.LambertAzimuthalEqualArea(
-            central_latitude=lat_center, central_longitude=lon_center
+        return ccrs.LambertConformal(
+            central_longitude=20.0,
+            central_latitude=60.0,
+            standard_parallels=(60.0, 60.0),
+            globe=ccrs.Globe(
+                semimajor_axis=6371229.0, semiminor_axis=6371229.0
+            ),
         )
 
     @property
