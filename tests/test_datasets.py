@@ -302,6 +302,149 @@ def test_single_batch_with_boundary(datastore, datastore_boundary):
     model_device.common_step(batch_device)
 
 
+def test_dataset_item_shapes_with_atmosphere(datastore, datastore_atmosphere):
+    """Atmosphere concat uses ocean sea points, not a separate grid."""
+    n_sea = int(
+        datastore.get_mask(surface=True, stacked=True, invert=False).sum()
+    )
+    n_pred_steps = 4
+    num_past_atmosphere_steps = 1
+    num_future_atmosphere_steps = 0
+    dataset = WeatherDataset(
+        datastore=datastore,
+        datastore_boundary=None,
+        datastore_atmosphere=datastore_atmosphere,
+        split="train",
+        ar_steps=n_pred_steps,
+        input_steps=2,
+        num_past_forcing_steps=1,
+        num_future_forcing_steps=1,
+        num_past_atmosphere_steps=num_past_atmosphere_steps,
+        num_future_atmosphere_steps=num_future_atmosphere_steps,
+        current_atmosphere_step=True,
+        use_atmosphere_g2m=False,
+    )
+    (
+        init_states,
+        _target_states,
+        _forcing,
+        _boundary,
+        atmosphere,
+        _times,
+    ) = dataset[0]
+
+    n_atm_feat = datastore_atmosphere.get_num_data_vars("forcing")
+    n_windows = num_past_atmosphere_steps + num_future_atmosphere_steps + 1
+    assert init_states.shape[1] == n_sea
+    assert atmosphere.shape == (
+        n_pred_steps,
+        n_sea,
+        n_atm_feat * n_windows,
+    )
+
+
+def test_single_batch_with_atmosphere(datastore, datastore_atmosphere):
+    """One GraphCast step with atmosphere concatenated onto interior nodes."""
+    device_name = torch.device("cuda") if torch.cuda.is_available() else "cpu"
+    graph_name = "1level"
+    args = DummyModelArgs()
+    args.graph = graph_name
+    args.use_atmosphere_g2m = False
+    args.num_past_atmosphere_steps = 1
+    args.num_future_atmosphere_steps = 0
+    args.current_atmosphere_step = 1
+
+    create_test_graph(datastore, name=graph_name)
+
+    config = nlconfig.NeuralLAMConfig(
+        datastore=nlconfig.DatastoreSelection(
+            kind=datastore.SHORT_NAME, config_path=str(datastore.root_path)
+        )
+    )
+    dataset = WeatherDataset(
+        datastore=datastore,
+        datastore_boundary=None,
+        datastore_atmosphere=datastore_atmosphere,
+        split="train",
+        ar_steps=2,
+        input_steps=2,
+        num_past_atmosphere_steps=1,
+        num_future_atmosphere_steps=0,
+        current_atmosphere_step=True,
+        use_atmosphere_g2m=False,
+    )
+    model = GraphCast(
+        args=args,
+        datastore=datastore,
+        datastore_boundary=None,
+        datastore_atmosphere=datastore_atmosphere,
+        config=config,
+    )
+    assert model.concat_atmosphere
+    assert model.num_atmosphere_nodes == 0
+    model_device = model.to(device_name)
+    batch = next(iter(DataLoader(dataset, batch_size=1)))
+    batch_device = [part.to(device_name) for part in batch]
+    model_device.common_step(batch_device)
+
+
+def test_single_batch_with_boundary_and_atmosphere(
+    datastore, datastore_boundary, datastore_atmosphere
+):
+    """Regional step with lateral g2m boundary plus concatenated atmosphere."""
+    device_name = torch.device("cuda") if torch.cuda.is_available() else "cpu"
+    graph_name = "1level"
+    args = DummyModelArgs()
+    args.graph = graph_name
+    args.use_atmosphere_g2m = False
+    args.num_past_boundary_steps = 1
+    args.num_future_boundary_steps = 0
+    args.current_boundary_step = 1
+    args.num_past_atmosphere_steps = 1
+    args.num_future_atmosphere_steps = 0
+    args.current_atmosphere_step = 1
+
+    create_test_graph(
+        datastore,
+        name=graph_name,
+        datastore_boundary=datastore_boundary,
+    )
+
+    config = nlconfig.NeuralLAMConfig(
+        datastore=nlconfig.DatastoreSelection(
+            kind=datastore.SHORT_NAME, config_path=str(datastore.root_path)
+        )
+    )
+    dataset = WeatherDataset(
+        datastore=datastore,
+        datastore_boundary=datastore_boundary,
+        datastore_atmosphere=datastore_atmosphere,
+        split="train",
+        ar_steps=2,
+        input_steps=2,
+        num_past_boundary_steps=1,
+        num_future_boundary_steps=0,
+        current_boundary_step=True,
+        num_past_atmosphere_steps=1,
+        num_future_atmosphere_steps=0,
+        current_atmosphere_step=True,
+        use_atmosphere_g2m=False,
+    )
+    model = GraphCast(
+        args=args,
+        datastore=datastore,
+        datastore_boundary=datastore_boundary,
+        datastore_atmosphere=datastore_atmosphere,
+        config=config,
+    )
+    assert model.boundary_forced
+    assert model.concat_atmosphere
+    model_device = model.to(device_name)
+    batch = next(iter(DataLoader(dataset, batch_size=1)))
+    batch_device = [part.to(device_name) for part in batch]
+    model_device.common_step(batch_device)
+
+
 @pytest.mark.parametrize(
     "dataset_config",
     [

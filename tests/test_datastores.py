@@ -257,6 +257,23 @@ def test_lateral_boundary_halo_bands(datastore, datastore_boundary):
     assert np.all(interior_on_halo[interior_xy])
 
 
+def test_atmosphere_shares_interior_grid(datastore, datastore_atmosphere):
+    """Atmosphere concat path requires the same 24×24 grid as the ocean."""
+    assert (
+        datastore_atmosphere.grid_shape_state.x,
+        datastore_atmosphere.grid_shape_state.y,
+    ) == (datastore.grid_shape_state.x, datastore.grid_shape_state.y)
+    np.testing.assert_allclose(datastore_atmosphere._x, datastore._x)
+    np.testing.assert_allclose(datastore_atmosphere._y, datastore._y)
+    np.testing.assert_array_equal(
+        datastore_atmosphere.get_mask(surface=True, stacked=True, invert=False),
+        datastore.get_mask(surface=True, stacked=True, invert=False),
+    )
+    assert datastore_atmosphere.get_vars_names("forcing") == list(
+        DummyDatastore.ATMOSPHERE_FORCING_NAMES
+    )
+
+
 def test_get_xy_extent(datastore):
     """Check that the `datastore.get_xy_extent` method is implemented and that
     the returned object is a tuple of the correct length."""

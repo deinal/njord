@@ -32,6 +32,12 @@ def datastore_boundary(datastore):
     return DummyDatastore.lateral_boundary(datastore)
 
 
+@pytest.fixture
+def datastore_atmosphere(datastore):
+    """Same 24×24 grid as the interior, with atmospheric forcing."""
+    return DummyDatastore.atmosphere(datastore)
+
+
 def create_test_graph(
     datastore,
     name="1level",

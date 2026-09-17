@@ -29,8 +29,9 @@ class DummyDatastore(BaseRegularGridDatastore):
     Sea/land masks are centered horizontal bands (full ``x``, limited ``y``):
     12 pixels at the surface and 6 pixels at 50 m on the default 24×24
     interior grid. A lateral-boundary datastore is a 28×28 halo with 14- and
-    8-pixel bands. State features follow MDP-style stacking, with depth in
-    the name (``thetao_0m``, ``thetao_50m``, ...).
+    8-pixel bands. Atmospheric forcing uses the same 24×24 grid (concat path).
+    State features follow MDP-style stacking, with depth in the name
+    (``thetao_0m``, ``thetao_50m``, ...).
     """
 
     SHORT_NAME = "dummydata"
@@ -48,6 +49,7 @@ class DummyDatastore(BaseRegularGridDatastore):
         "forcing": ["forcing_feat_0", "forcing_feat_1"],
         "static": ["deptho"],
     }
+    ATMOSPHERE_FORCING_NAMES = ["sotemair", "sowinu10", "sowinv10"]
     N_FEATURES = {k: len(v) for k, v in FEATURE_NAMES.items()}
     DEEP_STATE_FEATURES = frozenset(["thetao_50m", "so_50m"])
     CARTESIAN_COORDS = ["x", "y"]
@@ -271,6 +273,26 @@ class DummyDatastore(BaseRegularGridDatastore):
             feature_names={
                 "state": ocean_vars,
                 "forcing": ocean_vars,
+                "static": list(cls.FEATURE_NAMES["static"]),
+            },
+        )
+
+    @classmethod
+    def atmosphere(cls, interior: "DummyDatastore"):
+        """Same 24×24 grid as the interior, with atmospheric forcing channels.
+
+        Used for the default concat path (``use_atmosphere_g2m=False``), which
+        indexes atmosphere with the ocean surface mask.
+        """
+        return cls(
+            n_timesteps=interior._n_timesteps,
+            surface_band_width=interior.surface_band_width,
+            depth_band_width=interior.depth_band_width,
+            x_coords=interior._x,
+            y_coords=interior._y,
+            feature_names={
+                "state": list(cls.FEATURE_NAMES["state"]),
+                "forcing": list(cls.ATMOSPHERE_FORCING_NAMES),
                 "static": list(cls.FEATURE_NAMES["static"]),
             },
         )
