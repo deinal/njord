@@ -207,6 +207,101 @@ def test_single_batch(datastore, split):
     model_device.training_step(batch_device)
 
 
+def test_dataset_item_shapes_with_boundary(datastore, datastore_boundary):
+    """Lateral boundary tensor is sea points on the 28×28 halo, windowed."""
+    n_sea = int(
+        datastore.get_mask(surface=True, stacked=True, invert=False).sum()
+    )
+    n_sea_boundary = int(
+        datastore_boundary.get_mask(
+            surface=True, stacked=True, invert=False
+        ).sum()
+    )
+    n_pred_steps = 4
+    num_past_boundary_steps = 1
+    num_future_boundary_steps = 0
+    dataset = WeatherDataset(
+        datastore=datastore,
+        datastore_boundary=datastore_boundary,
+        datastore_atmosphere=None,
+        split="train",
+        ar_steps=n_pred_steps,
+        input_steps=2,
+        num_past_forcing_steps=1,
+        num_future_forcing_steps=1,
+        num_past_boundary_steps=num_past_boundary_steps,
+        num_future_boundary_steps=num_future_boundary_steps,
+        current_boundary_step=True,
+    )
+    (
+        init_states,
+        target_states,
+        _forcing,
+        boundary,
+        _atmosphere,
+        _times,
+    ) = dataset[0]
+
+    assert init_states.shape[1] == n_sea
+    assert target_states.shape[1] == n_sea
+    n_bnd_feat = datastore_boundary.get_num_data_vars("forcing")
+    n_windows = num_past_boundary_steps + num_future_boundary_steps + 1
+    assert boundary.shape == (
+        n_pred_steps,
+        n_sea_boundary,
+        n_bnd_feat * n_windows,
+    )
+    assert n_sea_boundary == (
+        DummyDatastore.BOUNDARY_GRID_SIZE
+        * DummyDatastore.BOUNDARY_SURFACE_BAND_WIDTH
+    )
+
+
+def test_single_batch_with_boundary(datastore, datastore_boundary):
+    """One GraphCast step with lateral boundary g2m nodes."""
+    device_name = torch.device("cuda") if torch.cuda.is_available() else "cpu"
+    graph_name = "1level"
+    args = DummyModelArgs()
+    args.graph = graph_name
+    args.num_past_boundary_steps = 1
+    args.num_future_boundary_steps = 0
+    args.current_boundary_step = 1
+
+    create_test_graph(
+        datastore,
+        name=graph_name,
+        datastore_boundary=datastore_boundary,
+    )
+
+    config = nlconfig.NeuralLAMConfig(
+        datastore=nlconfig.DatastoreSelection(
+            kind=datastore.SHORT_NAME, config_path=str(datastore.root_path)
+        )
+    )
+    dataset = WeatherDataset(
+        datastore=datastore,
+        datastore_boundary=datastore_boundary,
+        datastore_atmosphere=None,
+        split="train",
+        ar_steps=2,
+        input_steps=2,
+        num_past_boundary_steps=1,
+        num_future_boundary_steps=0,
+        current_boundary_step=True,
+    )
+    model = GraphCast(
+        args=args,
+        datastore=datastore,
+        datastore_boundary=datastore_boundary,
+        datastore_atmosphere=None,
+        config=config,
+    )
+    model_device = model.to(device_name)
+    batch = next(iter(DataLoader(dataset, batch_size=1)))
+    batch_device = [part.to(device_name) for part in batch]
+    model_device.common_step(batch_device)
+
+
 @pytest.mark.parametrize(
     "dataset_config",
     [

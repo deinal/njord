@@ -21,9 +21,15 @@ DATASTORES[DummyDatastore.SHORT_NAME] = DummyDatastore
 
 @pytest.fixture
 def datastore():
-    """24×24 in-memory grid so graph creation stays fast in CI."""
+    """24×24 interior grid with a 12-pixel surface band."""
     n = DummyDatastore.GRID_SIZE
     return DummyDatastore(n_grid_points=n * n, n_timesteps=16)
+
+
+@pytest.fixture
+def datastore_boundary(datastore):
+    """28×28 halo grid with 14- and 8-pixel bands for lateral forcing."""
+    return DummyDatastore.lateral_boundary(datastore)
 
 
 def create_test_graph(
@@ -32,6 +38,7 @@ def create_test_graph(
     graph_type="multiscale",
     n_max_levels=1,
     graph_dir_path=None,
+    datastore_boundary=None,
 ):
     """Build a graph under graphs/<name> (or graph_dir_path if given)."""
     if graph_dir_path is None:
@@ -40,7 +47,7 @@ def create_test_graph(
     graph_dir_path.mkdir(parents=True, exist_ok=True)
     create_graph_from_datastore(
         datastore=datastore,
-        datastore_boundary=None,
+        datastore_boundary=datastore_boundary,
         datastore_atmosphere=None,
         use_atmosphere_g2m=False,
         graph_dir_path=str(graph_dir_path),
@@ -83,3 +90,9 @@ class DummyModelArgs:
     hidden_dim_mesh_nodes = None
     grad_checkpointing = False
     use_atmosphere_g2m = False
+    num_past_boundary_steps = 1
+    num_future_boundary_steps = 0
+    current_boundary_step = 1
+    num_past_atmosphere_steps = 1
+    num_future_atmosphere_steps = 0
+    current_atmosphere_step = 1

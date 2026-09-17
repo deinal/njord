@@ -167,7 +167,7 @@ def test_boundary_mask(datastore):
 
 
 def test_ocean_mask_nested_depths(datastore):
-    """Surface disk is not all-sea; 50 m disk is smaller and nested inside it."""
+    """Surface band is 12 pixels; 50 m band is 6 pixels nested inside it."""
     n_x, n_y = datastore.grid_shape_state.x, datastore.grid_shape_state.y
     n_grid = n_x * n_y
     n_feat = datastore.get_num_data_vars("state")
@@ -189,6 +189,11 @@ def test_ocean_mask_nested_depths(datastore):
     assert surface.any()
     assert surface_xy.shape == (n_x, n_y)
     np.testing.assert_array_equal(surface, surface_xy.reshape(-1))
+    assert surface_xy.sum() == n_x * DummyDatastore.SURFACE_BAND_WIDTH
+    assert int(surface_xy.any(axis=1).sum()) == n_x
+    assert (
+        int(surface_xy.all(axis=0).sum()) == DummyDatastore.SURFACE_BAND_WIDTH
+    )
 
     assert full.shape == (n_grid, n_feat)
     assert full_xy.shape == (n_x, n_y, n_feat)
@@ -197,8 +202,8 @@ def test_ocean_mask_nested_depths(datastore):
     n_wet = full.sum(axis=0)
     deep_idx = names.index("thetao_50m")
     surface_idx = names.index("thetao_0m")
+    assert n_wet[deep_idx] == n_x * DummyDatastore.DEPTH_BAND_WIDTH
     assert n_wet[deep_idx] < n_wet[surface_idx]
-    # smaller disk is strictly inside the surface disk
     np.testing.assert_array_equal(
         full[:, deep_idx], full[:, deep_idx] & full[:, surface_idx]
     )
@@ -207,6 +212,49 @@ def test_ocean_mask_nested_depths(datastore):
     inverted = datastore.get_mask(surface=True, stacked=True, invert=True)
     np.testing.assert_array_equal(inverted, ~surface)
 
+
+def test_lateral_boundary_halo_bands(datastore, datastore_boundary):
+    """28×28 halo: 14-pixel surface band, 8-pixel 50 m band, nested."""
+    n_x, n_y = (
+        datastore_boundary.grid_shape_state.x,
+        datastore_boundary.grid_shape_state.y,
+    )
+    assert (n_x, n_y) == (
+        DummyDatastore.BOUNDARY_GRID_SIZE,
+        DummyDatastore.BOUNDARY_GRID_SIZE,
+    )
+    assert (
+        datastore_boundary.surface_band_width
+        == DummyDatastore.BOUNDARY_SURFACE_BAND_WIDTH
+    )
+    assert (
+        datastore_boundary.depth_band_width
+        == DummyDatastore.BOUNDARY_DEPTH_BAND_WIDTH
+    )
+
+    surface_xy = datastore_boundary.get_mask(
+        surface=True, stacked=False, invert=False
+    )
+    full_xy = datastore_boundary.get_mask(
+        surface=False, stacked=False, invert=False
+    )
+    names = datastore_boundary.get_vars_names("state")
+    deep_idx = names.index("thetao_50m")
+
+    assert surface_xy.sum() == n_x * DummyDatastore.BOUNDARY_SURFACE_BAND_WIDTH
+    assert full_xy[:, :, deep_idx].sum() == (
+        n_x * DummyDatastore.BOUNDARY_DEPTH_BAND_WIDTH
+    )
+    assert np.all(full_xy[:, :, deep_idx] <= surface_xy)
+    assert datastore_boundary.get_vars_names("forcing") == names
+
+    halo = DummyDatastore.HALO_CELLS
+    interior_xy = datastore.get_mask(surface=True, stacked=False, invert=False)
+    interior_on_halo = surface_xy[
+        halo : halo + interior_xy.shape[0],
+        halo : halo + interior_xy.shape[1],
+    ]
+    assert np.all(interior_on_halo[interior_xy])
 
 
 def test_get_xy_extent(datastore):

@@ -26,18 +26,23 @@ class DummyDatastore(BaseRegularGridDatastore):
     regular Lambert Conformal grid over the Baltic Sea (500x500 km, centered
     at 20°E, 60°N).
 
-    Sea/land masks are concentric disks: a surface circle and a slightly
-    smaller circle one depth down (50 m), nested inside the surface disk.
-    State features follow MDP-style stacking, with depth in the name
-    (``thetao_0m``, ``thetao_50m``, ...).
+    Sea/land masks are centered horizontal bands (full ``x``, limited ``y``):
+    12 pixels at the surface and 6 pixels at 50 m on the default 24×24
+    interior grid. A lateral-boundary datastore is a 28×28 halo with 14- and
+    8-pixel bands. State features follow MDP-style stacking, with depth in
+    the name (``thetao_0m``, ``thetao_50m``, ...).
     """
 
     SHORT_NAME = "dummydata"
     T0 = isodate.parse_datetime("2021-01-01T00:00:00")
     GRID_SIZE = 24
     DEPTHS_M = (0, 50)
-    SURFACE_RADIUS_FRAC = 0.80
-    DEPTH_RADIUS_FRAC = 0.68
+    SURFACE_BAND_WIDTH = 12
+    DEPTH_BAND_WIDTH = 6
+    HALO_CELLS = 2
+    BOUNDARY_GRID_SIZE = GRID_SIZE + 2 * HALO_CELLS
+    BOUNDARY_SURFACE_BAND_WIDTH = 14
+    BOUNDARY_DEPTH_BAND_WIDTH = 8
     FEATURE_NAMES = {
         "state": ["zos", "thetao_0m", "so_0m", "thetao_50m", "so_50m"],
         "forcing": ["forcing_feat_0", "forcing_feat_1"],
@@ -52,8 +57,13 @@ class DummyDatastore(BaseRegularGridDatastore):
     def __init__(
         self,
         config_path=None,
-        n_grid_points=GRID_SIZE * GRID_SIZE,
+        n_grid_points=None,
         n_timesteps=10,
+        surface_band_width=None,
+        depth_band_width=None,
+        x_coords=None,
+        y_coords=None,
+        feature_names=None,
     ) -> None:
         """
         Create a dummy datastore with random data.
@@ -65,23 +75,55 @@ class DummyDatastore(BaseRegularGridDatastore):
             only present to match the signature of the other datastores.
         n_grid_points : int
             The number of grid points in the dataset. Must be a perfect square.
+            Ignored when ``x_coords`` / ``y_coords`` are given.
         n_timesteps : int
             The number of timesteps in the dataset.
+        surface_band_width : int
+            Height in grid cells of the surface sea band. Defaults to 12.
+        depth_band_width : int
+            Height in grid cells of the 50 m sea band. Defaults to 6.
+        x_coords, y_coords : array-like
+            Optional projected coordinates (m). Used for the 28×28 halo grid.
+        feature_names : dict
+            Optional override of ``FEATURE_NAMES`` (boundary uses ocean vars
+            as forcing).
         """
         assert (
             config_path is None
         ), "No config file is needed for the dummy datastore"
 
-        # Ensure n_grid_points is a perfect square
-        n_points_1d = int(np.sqrt(n_grid_points))
-        assert (
-            n_points_1d * n_points_1d == n_grid_points
-        ), "n_grid_points must be a perfect square"
+        self._feature_names = feature_names or self.FEATURE_NAMES
+        self._n_timesteps = n_timesteps
 
-        # create projected grid (origin at 20°E, 60°N)
-        lx, ly = self.bbox_size_km
-        x = np.linspace(-lx / 2.0 * 1.0e3, lx / 2.0 * 1.0e3, n_points_1d)
-        y = np.linspace(-ly / 2.0 * 1.0e3, ly / 2.0 * 1.0e3, n_points_1d)
+        if x_coords is not None or y_coords is not None:
+            assert x_coords is not None and y_coords is not None
+            x = np.asarray(x_coords, dtype=float)
+            y = np.asarray(y_coords, dtype=float)
+            assert x.ndim == y.ndim == 1
+            assert x.size == y.size, "dummy grid must be square"
+            n_points_1d = int(x.size)
+            n_grid_points = n_points_1d * n_points_1d
+        else:
+            if n_grid_points is None:
+                n_grid_points = self.GRID_SIZE * self.GRID_SIZE
+            n_points_1d = int(np.sqrt(n_grid_points))
+            assert (
+                n_points_1d * n_points_1d == n_grid_points
+            ), "n_grid_points must be a perfect square"
+            lx, ly = self.bbox_size_km
+            x = np.linspace(-lx / 2.0 * 1.0e3, lx / 2.0 * 1.0e3, n_points_1d)
+            y = np.linspace(-ly / 2.0 * 1.0e3, ly / 2.0 * 1.0e3, n_points_1d)
+
+        if surface_band_width is None:
+            surface_band_width = self.SURFACE_BAND_WIDTH
+        if depth_band_width is None:
+            depth_band_width = self.DEPTH_BAND_WIDTH
+        surface_band_width = min(int(surface_band_width), n_points_1d)
+        depth_band_width = min(int(depth_band_width), surface_band_width)
+        self.surface_band_width = surface_band_width
+        self.depth_band_width = depth_band_width
+        self._x = x
+        self._y = y
 
         xs, ys = np.meshgrid(x, y)
 
@@ -126,13 +168,15 @@ class DummyDatastore(BaseRegularGridDatastore):
                 ),
             }
         )
-        self._surface_disk = self._disk_mask(
-            n_points_1d, self.SURFACE_RADIUS_FRAC
+        self._surface_band = self._horizontal_band(
+            n_points_1d, self.surface_band_width
         )
-        self._depth_disk = self._disk_mask(n_points_1d, self.DEPTH_RADIUS_FRAC)
+        self._depth_band = self._horizontal_band(
+            n_points_1d, self.depth_band_width
+        )
 
         # Create data variables with proper dimensions
-        for category, feature_names in self.FEATURE_NAMES.items():
+        for category, feature_names in self._feature_names.items():
             n = len(feature_names)
             feature_units = ["-" for _ in range(n)]  # Placeholder units
             feature_long_names = [
@@ -187,6 +231,49 @@ class DummyDatastore(BaseRegularGridDatastore):
         self._tempdir = tempfile.TemporaryDirectory()
         self._root_path = Path(self._tempdir.name)
         self._num_grid_points = n_grid_points
+
+    @classmethod
+    def lateral_boundary(cls, interior: "DummyDatastore", halo_cells=None):
+        """28×28 halo grid with a 14-pixel surface band and 8-pixel 50 m band.
+
+        Coordinates keep the interior spacing and extend ``halo_cells`` (2)
+        points on each side so the extra wet rows/columns are a lateral halo.
+        Forcing features are the same ocean state variables (parent-model
+        analogue).
+        """
+        if halo_cells is None:
+            halo_cells = cls.HALO_CELLS
+        x = np.asarray(interior._x)
+        y = np.asarray(interior._y)
+        dx = x[1] - x[0]
+        dy = y[1] - y[0]
+        x_halo = np.concatenate(
+            (
+                x[0] + dx * np.arange(-halo_cells, 0),
+                x,
+                x[-1] + dx * np.arange(1, halo_cells + 1),
+            )
+        )
+        y_halo = np.concatenate(
+            (
+                y[0] + dy * np.arange(-halo_cells, 0),
+                y,
+                y[-1] + dy * np.arange(1, halo_cells + 1),
+            )
+        )
+        ocean_vars = list(cls.FEATURE_NAMES["state"])
+        return cls(
+            n_timesteps=interior._n_timesteps,
+            surface_band_width=cls.BOUNDARY_SURFACE_BAND_WIDTH,
+            depth_band_width=cls.BOUNDARY_DEPTH_BAND_WIDTH,
+            x_coords=x_halo,
+            y_coords=y_halo,
+            feature_names={
+                "state": ocean_vars,
+                "forcing": ocean_vars,
+                "static": list(cls.FEATURE_NAMES["static"]),
+            },
+        )
 
     @property
     def root_path(self) -> Path:
@@ -491,22 +578,21 @@ class DummyDatastore(BaseRegularGridDatastore):
         return self.get_xy(category=category, stacked=stacked)
 
     @staticmethod
-    def _disk_mask(n: int, radius_frac: float) -> ndarray:
-        """Boolean disk of radius ``radius_frac * (n-1)/2`` on an n×n grid."""
-        yy, xx = np.ogrid[:n, :n]
-        center = (n - 1) / 2.0
-        return (xx - center) ** 2 + (yy - center) ** 2 <= (
-            radius_frac * center
-        ) ** 2
+    def _horizontal_band(n: int, width: int) -> ndarray:
+        """Centered band of ``width`` cells along y, spanning all x."""
+        mask = np.zeros((n, n), dtype=bool)
+        start = (n - width) // 2
+        mask[:, start : start + width] = True
+        return mask
 
     def get_mask(self, surface: bool, stacked: bool, invert: bool) -> ndarray:
         """
-        Nested circular sea mask: surface disk, smaller disk at 50 m.
+        Nested horizontal sea bands: wider at the surface, narrower at 50 m.
 
         Parameters
         ----------
         surface : bool
-            If True, return only the surface (largest) disk.
+            If True, return only the surface (widest) band.
         stacked : bool
             If True, flatten ``x``/``y`` into ``grid_index``.
         invert : bool
@@ -520,9 +606,9 @@ class DummyDatastore(BaseRegularGridDatastore):
         )
         for i, name in enumerate(names):
             mask[:, :, i] = (
-                self._depth_disk
+                self._depth_band
                 if name in self.DEEP_STATE_FEATURES
-                else self._surface_disk
+                else self._surface_band
             )
         if surface:
             mask_out = mask[:, :, 0]
