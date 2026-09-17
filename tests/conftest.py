@@ -21,8 +21,9 @@ DATASTORES[DummyDatastore.SHORT_NAME] = DummyDatastore
 
 @pytest.fixture
 def datastore():
-    """Small in-memory grid so graph creation stays fast in CI."""
-    return DummyDatastore(n_grid_points=256, n_timesteps=16)
+    """24×24 in-memory grid so graph creation stays fast in CI."""
+    n = DummyDatastore.GRID_SIZE
+    return DummyDatastore(n_grid_points=n * n, n_timesteps=16)
 
 
 def create_test_graph(

@@ -100,7 +100,7 @@ from huggingface_hub import snapshot_download
 snapshot_download(
     repo_id="deinal/njord-sample-data",
     repo_type="dataset",
-    local_dir="sample-data"
+    local_dir="sample_data"
 )
 ```
 
@@ -128,6 +128,15 @@ python -m neural_lam.train_model \
 For more commands see:
 ```
 python -m neural_lam.train_model --help
+```
+
+## Graph visualization
+
+```
+python -m neural_lam.plot_global_graph_3d \
+    --config_path sample_data/global_ocean_1.yaml \
+    --graph_name global_cluster_graph \
+    --save global_cluster_graph.html
 ```
 
 # Using Njord

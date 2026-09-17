@@ -20,8 +20,8 @@ def test_clamping(datastore):
         ),
         training=nlconfig.TrainingConfig(
             output_clamping=nlconfig.OutputClamping(
-                lower={"state_feat_0": 0.0, "state_feat_1": 0.0},
-                upper={"state_feat_1": 1.0, "state_feat_2": 100.0},
+                lower={"zos": 0.0, "thetao_0m": 0.0},
+                upper={"thetao_0m": 1.0, "so_0m": 100.0},
             )
         ),
     )

@@ -18,8 +18,12 @@ def test_dataset_item_shapes(datastore):
     init_states: (2, N_grid, d_features)
     target_states: (ar_steps, N_grid, d_features)
     forcing: (ar_steps, N_grid, d_windowed_forcing)
+
+    N_grid is the number of surface-sea points, not the full lat/lon grid.
     """
-    N_gridpoints = datastore.num_grid_points
+    n_sea = int(
+        datastore.get_mask(surface=True, stacked=True, invert=False).sum()
+    )
 
     N_pred_steps = 4
     num_past_forcing_steps = 1
@@ -51,19 +55,19 @@ def test_dataset_item_shapes(datastore):
     # initial states
     assert init_states.ndim == 3
     assert init_states.shape[0] == 2  # two time steps go into the input
-    assert init_states.shape[1] == N_gridpoints
+    assert init_states.shape[1] == n_sea
     assert init_states.shape[2] == datastore.get_num_data_vars("state")
 
     # output states
     assert target_states.ndim == 3
     assert target_states.shape[0] == N_pred_steps
-    assert target_states.shape[1] == N_gridpoints
+    assert target_states.shape[1] == n_sea
     assert target_states.shape[2] == datastore.get_num_data_vars("state")
 
     # forcing
     assert forcing.ndim == 3
     assert forcing.shape[0] == N_pred_steps
-    assert forcing.shape[1] == N_gridpoints
+    assert forcing.shape[1] == n_sea
     assert forcing.shape[2] == datastore.get_num_data_vars("forcing") * (
         num_past_forcing_steps + num_future_forcing_steps + 1
     )
@@ -114,10 +118,15 @@ def test_dataset_item_create_dataarray_from_tensor(datastore):
         tensor=target_states, category="state", time=target_times
     )
 
+    land = dataset.land_mask  # True on land
+    wet = ~land
     # conversion to torch.float32 may lead to loss of precision
     np.testing.assert_allclose(
-        da_target.values, da_target_true.values, rtol=1e-6
+        da_target.values[:, wet],
+        da_target_true.values[:, wet],
+        rtol=1e-6,
     )
+    assert np.isnan(da_target.values[:, land]).all()
     assert da_target.dims == da_target_true.dims
     for dim in da_target.dims:
         np.testing.assert_equal(
@@ -137,8 +146,11 @@ def test_dataset_item_create_dataarray_from_tensor(datastore):
     # check that the content is the same
     # conversion to torch.float32 may lead to loss of precision
     np.testing.assert_allclose(
-        da_target_single.values, da_target_true[0].values, rtol=1e-6
+        da_target_single.values[wet],
+        da_target_true[0].values[wet],
+        rtol=1e-6,
     )
+    assert np.isnan(da_target_single.values[land]).all()
     assert da_target_single.dims == da_target_true[0].dims
     for dim in da_target_single.dims:
         np.testing.assert_equal(
@@ -235,3 +247,25 @@ def test_dataset_length(dataset_config):
     # Check that we can actually get last and first sample
     dataset[0]
     dataset[expected_len - 1]
+
+
+def test_dataset_zeros_below_bathymetry(datastore):
+    """Land and below-bottom cells are zeroed on the sea-point tensor."""
+    dataset = WeatherDataset(
+        datastore=datastore,
+        datastore_boundary=None,
+        datastore_atmosphere=None,
+        split="train",
+        ar_steps=2,
+        input_steps=2,
+        standardize=False,
+    )
+    init_states, target_states, *_ = dataset[0]
+    dry = torch.as_tensor(dataset.land_mask_bool, dtype=torch.bool)
+    assert dry.any(), "expected some dry cells at depth"
+    assert torch.all(init_states[:, dry[0]] == 0)
+    assert torch.all(target_states[:, dry[0]] == 0)
+    # surface features stay wet on every sea point
+    names = datastore.get_vars_names("state")
+    zos_idx = names.index("zos")
+    assert not dry[0, :, zos_idx].any()

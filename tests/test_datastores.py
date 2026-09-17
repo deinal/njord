@@ -14,6 +14,7 @@ import xarray as xr
 
 # First-party
 from neural_lam.datastore.plot_example import plot_example_from_datastore
+from tests.dummy_datastore import DummyDatastore
 
 
 def test_root_path(datastore):
@@ -163,6 +164,49 @@ def test_boundary_mask(datastore):
 
     grid_shape = datastore.grid_shape_state
     assert datastore.boundary_mask.size == grid_shape.x * grid_shape.y
+
+
+def test_ocean_mask_nested_depths(datastore):
+    """Surface disk is not all-sea; 50 m disk is smaller and nested inside it."""
+    n_x, n_y = datastore.grid_shape_state.x, datastore.grid_shape_state.y
+    n_grid = n_x * n_y
+    n_feat = datastore.get_num_data_vars("state")
+    names = datastore.get_vars_names("state")
+
+    assert (n_x, n_y) == (DummyDatastore.GRID_SIZE, DummyDatastore.GRID_SIZE)
+    assert list(datastore.ds.depth.values) == list(DummyDatastore.DEPTHS_M)
+    assert "thetao_0m" in names
+    assert "thetao_50m" in names
+
+    surface = datastore.get_mask(surface=True, stacked=True, invert=False)
+    full = datastore.get_mask(surface=False, stacked=True, invert=False)
+    surface_xy = datastore.get_mask(surface=True, stacked=False, invert=False)
+    full_xy = datastore.get_mask(surface=False, stacked=False, invert=False)
+
+    assert surface.dtype == bool
+    assert surface.shape == (n_grid,)
+    assert not surface.all()
+    assert surface.any()
+    assert surface_xy.shape == (n_x, n_y)
+    np.testing.assert_array_equal(surface, surface_xy.reshape(-1))
+
+    assert full.shape == (n_grid, n_feat)
+    assert full_xy.shape == (n_x, n_y, n_feat)
+    np.testing.assert_array_equal(full[:, 0], surface)
+
+    n_wet = full.sum(axis=0)
+    deep_idx = names.index("thetao_50m")
+    surface_idx = names.index("thetao_0m")
+    assert n_wet[deep_idx] < n_wet[surface_idx]
+    # smaller disk is strictly inside the surface disk
+    np.testing.assert_array_equal(
+        full[:, deep_idx], full[:, deep_idx] & full[:, surface_idx]
+    )
+    assert np.all(surface[full[:, deep_idx]])
+
+    inverted = datastore.get_mask(surface=True, stacked=True, invert=True)
+    np.testing.assert_array_equal(inverted, ~surface)
+
 
 
 def test_get_xy_extent(datastore):

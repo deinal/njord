@@ -25,17 +25,35 @@ class DummyDatastore(BaseRegularGridDatastore):
     consists of state, forcing, and static variables, and is stored in a
     regular Lambert Conformal grid over the Baltic Sea (500x500 km, centered
     at 20°E, 60°N).
+
+    Sea/land masks are concentric disks: a surface circle and a slightly
+    smaller circle one depth down (50 m), nested inside the surface disk.
+    State features follow MDP-style stacking, with depth in the name
+    (``thetao_0m``, ``thetao_50m``, ...).
     """
 
     SHORT_NAME = "dummydata"
     T0 = isodate.parse_datetime("2021-01-01T00:00:00")
-    N_FEATURES = dict(state=5, forcing=2, static=1)
+    GRID_SIZE = 24
+    DEPTHS_M = (0, 50)
+    SURFACE_RADIUS_FRAC = 0.80
+    DEPTH_RADIUS_FRAC = 0.68
+    FEATURE_NAMES = {
+        "state": ["zos", "thetao_0m", "so_0m", "thetao_50m", "so_50m"],
+        "forcing": ["forcing_feat_0", "forcing_feat_1"],
+        "static": ["deptho"],
+    }
+    N_FEATURES = {k: len(v) for k, v in FEATURE_NAMES.items()}
+    DEEP_STATE_FEATURES = frozenset(["thetao_50m", "so_50m"])
     CARTESIAN_COORDS = ["x", "y"]
 
     bbox_size_km = [500, 500]  # km
 
     def __init__(
-        self, config_path=None, n_grid_points=10000, n_timesteps=10
+        self,
+        config_path=None,
+        n_grid_points=GRID_SIZE * GRID_SIZE,
+        n_timesteps=10,
     ) -> None:
         """
         Create a dummy datastore with random data.
@@ -101,11 +119,21 @@ class DummyDatastore(BaseRegularGridDatastore):
                     lat_mesh.flatten(),
                     {"units": "degrees_north"},
                 ),
+                "depth": (
+                    "depth",
+                    np.array(self.DEPTHS_M, dtype=float),
+                    {"units": "m", "positive": "down"},
+                ),
             }
         )
+        self._surface_disk = self._disk_mask(
+            n_points_1d, self.SURFACE_RADIUS_FRAC
+        )
+        self._depth_disk = self._disk_mask(n_points_1d, self.DEPTH_RADIUS_FRAC)
+
         # Create data variables with proper dimensions
-        for category, n in self.N_FEATURES.items():
-            feature_names = [f"{category}_feat_{i}" for i in range(n)]
+        for category, feature_names in self.FEATURE_NAMES.items():
+            n = len(feature_names)
             feature_units = ["-" for _ in range(n)]  # Placeholder units
             feature_long_names = [
                 f"Long name for {name}" for name in feature_names
@@ -462,23 +490,52 @@ class DummyDatastore(BaseRegularGridDatastore):
         """Dummy coordinates are already in the projected CRS."""
         return self.get_xy(category=category, stacked=stacked)
 
+    @staticmethod
+    def _disk_mask(n: int, radius_frac: float) -> ndarray:
+        """Boolean disk of radius ``radius_frac * (n-1)/2`` on an n×n grid."""
+        yy, xx = np.ogrid[:n, :n]
+        center = (n - 1) / 2.0
+        return (xx - center) ** 2 + (yy - center) ** 2 <= (
+            radius_frac * center
+        ) ** 2
+
     def get_mask(self, surface: bool, stacked: bool, invert: bool) -> ndarray:
         """
-        Mask is false everywhere in this dummy.
+        Nested circular sea mask: surface disk, smaller disk at 50 m.
+
+        Parameters
+        ----------
+        surface : bool
+            If True, return only the surface (largest) disk.
+        stacked : bool
+            If True, flatten ``x``/``y`` into ``grid_index``.
+        invert : bool
+            If True, return land / below-bathymetry (True = dry).
         """
-        n_x = self.grid_shape_state.x
-        n_y = self.grid_shape_state.y
         n_feat = self.get_num_data_vars("state")
-        sea = np.ones((n_x, n_y), dtype=bool)
+        names = self.get_vars_names("state")
+        mask = np.empty(
+            (self.grid_shape_state.x, self.grid_shape_state.y, n_feat),
+            dtype=bool,
+        )
+        for i, name in enumerate(names):
+            mask[:, :, i] = (
+                self._depth_disk
+                if name in self.DEEP_STATE_FEATURES
+                else self._surface_disk
+            )
         if surface:
-            mask = sea.reshape(-1) if stacked else sea
+            mask_out = mask[:, :, 0]
         else:
-            mask = np.repeat(sea[..., None], n_feat, axis=-1)
-            if stacked:
-                mask = mask.reshape(-1, n_feat)
+            mask_out = mask
+        if stacked:
+            if surface:
+                mask_out = mask_out.reshape(self.num_grid_points)
+            else:
+                mask_out = mask_out.reshape(self.num_grid_points, n_feat)
         if invert:
-            mask = ~mask
-        return mask
+            mask_out = ~mask_out
+        return mask_out
 
     def get_atmosphere_mask(
         self, stacked: bool = True, invert: bool = False
