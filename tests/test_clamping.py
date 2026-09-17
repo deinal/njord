@@ -20,8 +20,8 @@ def test_clamping(datastore):
         ),
         training=nlconfig.TrainingConfig(
             output_clamping=nlconfig.OutputClamping(
-                lower={"zos": 0.0, "thetao_0m": 0.0},
-                upper={"thetao_0m": 1.0, "so_0m": 100.0},
+                lower={"siconc": 0.0, "sithick": 0.0},
+                upper={"siconc": 1.0},
             )
         ),
     )
@@ -35,6 +35,12 @@ def test_clamping(datastore):
     )
 
     features = datastore.get_vars_names(category="state")
+    siconc_idx = features.index("siconc")
+    sithick_idx = features.index("sithick")
+    assert model.clamp_lower_upper_idx.tolist() == [siconc_idx]
+    assert model.clamp_lower_idx.tolist() == [sithick_idx]
+    assert model.clamp_upper_idx.numel() == 0
+
     original_state = torch.zeros(1, 1, len(features))
     zero_delta = original_state.clone()
 
@@ -43,7 +49,6 @@ def test_clamping(datastore):
         model.sigmoid_lower_lims + model.sigmoid_upper_lims
     ) / 2
     original_state[:, :, model.clamp_lower_idx] = model.softplus_lower_lims + 10
-    original_state[:, :, model.clamp_upper_idx] = model.softplus_upper_lims - 10
 
     # Get a delta that tries to push the state out of bounds
     delta = torch.ones_like(zero_delta)
@@ -51,7 +56,6 @@ def test_clamping(datastore):
         model.sigmoid_upper_lims - model.sigmoid_lower_lims
     ) / 3
     delta[:, :, model.clamp_lower_idx] = -5
-    delta[:, :, model.clamp_upper_idx] = 5
 
     # Check that a delta of 0 gives unchanged state
     zero_prediction = model.get_clamped_new_state(zero_delta, original_state)
@@ -75,7 +79,6 @@ def test_clamping(datastore):
                         set(range(len(features)))
                         - set(model.clamp_lower_upper_idx.tolist())
                         - set(model.clamp_lower_idx.tolist())
-                        - set(model.clamp_upper_idx.tolist())
                     ),
                 ]
                 - n_loops
@@ -102,12 +105,6 @@ def test_clamping(datastore):
         .all()
         .item()
     )
-    assert (
-        (prediction[:, :, model.clamp_upper_idx] <= model.softplus_upper_lims)
-        .all()
-        .item()
-    )
-
     # Check that prediction is within bounds in original non-normalized space
     unscaled_prediction = prediction * model.state_std + model.state_mean
     features_idx = {f: i for i, f in enumerate(features)}
@@ -157,14 +154,6 @@ def test_clamping(datastore):
         .any()
         .item()
     )
-    assert (
-        not (
-            invalid_state[:, :, model.clamp_upper_idx]
-            <= model.softplus_upper_lims
-        )
-        .any()
-        .item()
-    )
     invalid_prediction = model.get_clamped_new_state(zero_delta, invalid_state)
     assert (
         (
@@ -183,15 +172,6 @@ def test_clamping(datastore):
         .all()
         .item()
     )
-    assert (
-        (
-            invalid_prediction[:, :, model.clamp_upper_idx]
-            <= model.softplus_upper_lims
-        )
-        .all()
-        .item()
-    )
-
     # Above tests only check the upper sigmoid limit.
     # Repeat to check lower sigmoid limit
 

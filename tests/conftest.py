@@ -38,6 +38,12 @@ def datastore_atmosphere(datastore):
     return DummyDatastore.atmosphere(datastore)
 
 
+@pytest.fixture
+def datastore_atmosphere_g2m(datastore):
+    """Coarser 12×12 atmosphere grid for extra g2m nodes."""
+    return DummyDatastore.atmosphere_g2m(datastore)
+
+
 def create_test_graph(
     datastore,
     name="1level",
@@ -45,6 +51,10 @@ def create_test_graph(
     n_max_levels=1,
     graph_dir_path=None,
     datastore_boundary=None,
+    datastore_atmosphere=None,
+    use_atmosphere_g2m=False,
+    mesh_node_distance=25_000.0,
+    max_edge_len=20_000.0,
 ):
     """Build a graph under graphs/<name> (or graph_dir_path if given)."""
     if graph_dir_path is None:
@@ -54,13 +64,13 @@ def create_test_graph(
     create_graph_from_datastore(
         datastore=datastore,
         datastore_boundary=datastore_boundary,
-        datastore_atmosphere=None,
-        use_atmosphere_g2m=False,
+        datastore_atmosphere=datastore_atmosphere,
+        use_atmosphere_g2m=use_atmosphere_g2m,
         graph_dir_path=str(graph_dir_path),
         g2m_radius=0.67,
         g2m_radius_boundary=0.67,
         g2m_radius_atm=0.67,
-        mesh_node_distance=25_000.0,
+        mesh_node_distance=mesh_node_distance,
         mesh_refinement_factor=4,
         grid_to_first_mesh_refinement=4,
         n_max_levels=n_max_levels,
@@ -68,6 +78,7 @@ def create_test_graph(
         create_plot=False,
         connect_disconnected=True,
         g2m_mean_degree=None,
+        max_edge_len=max_edge_len,
     )
     return graph_dir_path
 

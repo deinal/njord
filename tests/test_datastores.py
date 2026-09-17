@@ -177,6 +177,8 @@ def test_ocean_mask_nested_depths(datastore):
     assert list(datastore.ds.depth.values) == list(DummyDatastore.DEPTHS_M)
     assert "thetao_0m" in names
     assert "thetao_50m" in names
+    assert "siconc" in names
+    assert "sithick" in names
 
     surface = datastore.get_mask(surface=True, stacked=True, invert=False)
     full = datastore.get_mask(surface=False, stacked=True, invert=False)
@@ -202,8 +204,11 @@ def test_ocean_mask_nested_depths(datastore):
     n_wet = full.sum(axis=0)
     deep_idx = names.index("thetao_50m")
     surface_idx = names.index("thetao_0m")
+    n_surface = n_x * DummyDatastore.SURFACE_BAND_WIDTH
     assert n_wet[deep_idx] == n_x * DummyDatastore.DEPTH_BAND_WIDTH
     assert n_wet[deep_idx] < n_wet[surface_idx]
+    assert n_wet[names.index("siconc")] == n_surface
+    assert n_wet[names.index("sithick")] == n_surface
     np.testing.assert_array_equal(
         full[:, deep_idx], full[:, deep_idx] & full[:, surface_idx]
     )
@@ -270,6 +275,26 @@ def test_atmosphere_shares_interior_grid(datastore, datastore_atmosphere):
         datastore.get_mask(surface=True, stacked=True, invert=False),
     )
     assert datastore_atmosphere.get_vars_names("forcing") == list(
+        DummyDatastore.ATMOSPHERE_FORCING_NAMES
+    )
+
+
+def test_atmosphere_g2m_grid_is_coarser(datastore, datastore_atmosphere_g2m):
+    """Atmosphere g2m uses a 12×12 grid, in contrast to the ocean 24×24."""
+    n_atm = DummyDatastore.ATMOSPHERE_G2M_GRID_SIZE
+    assert (
+        datastore_atmosphere_g2m.grid_shape_state.x,
+        datastore_atmosphere_g2m.grid_shape_state.y,
+    ) == (n_atm, n_atm)
+    n_ocean = datastore.grid_shape_state.x * datastore.grid_shape_state.y
+    n_atm_pts = n_atm * n_atm
+    assert n_atm_pts < n_ocean
+    atm_mask = datastore_atmosphere_g2m.get_atmosphere_mask(
+        stacked=True, invert=False
+    )
+    assert atm_mask.shape == (n_atm_pts,)
+    assert atm_mask.all()
+    assert datastore_atmosphere_g2m.get_vars_names("forcing") == list(
         DummyDatastore.ATMOSPHERE_FORCING_NAMES
     )
 

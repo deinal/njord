@@ -158,3 +158,67 @@ def test_time_slicing_analysis(
         1 + num_past_forcing_steps + num_future_forcing_steps,
     )
     np.testing.assert_equal(forcing[:, 0, :], np.array(expected_forcing_values))
+
+
+ATMOSPHERE_VALUES = [20, 21, 22, 23, 24, 25, 26, 27, 28, 29]
+BOUNDARY_VALUES = [30, 31, 32, 33, 34, 35, 36, 37, 38, 39]
+
+
+def test_time_slicing_atmosphere_and_boundary():
+    """Atmosphere and boundary windows follow the same t-2:t forcing."""
+    time_values = (
+        np.datetime64("2020-01-01") + np.arange(len(ANALYSIS_STATE_VALUES))
+    ).astype("datetime64[ns]")
+    ocean = SinglePointDummyDatastore(
+        state_data=ANALYSIS_STATE_VALUES,
+        forcing_data=FORCING_VALUES,
+        time_values=time_values,
+        is_forecast=False,
+    )
+    atmosphere = SinglePointDummyDatastore(
+        state_data=ANALYSIS_STATE_VALUES,
+        forcing_data=ATMOSPHERE_VALUES,
+        time_values=time_values,
+        is_forecast=False,
+    )
+    boundary = SinglePointDummyDatastore(
+        state_data=ANALYSIS_STATE_VALUES,
+        forcing_data=BOUNDARY_VALUES,
+        time_values=time_values,
+        is_forecast=False,
+    )
+    dataset = WeatherDataset(
+        datastore=ocean,
+        datastore_boundary=boundary,
+        datastore_atmosphere=atmosphere,
+        ar_steps=3,
+        input_steps=2,
+        num_past_forcing_steps=1,
+        num_future_forcing_steps=0,
+        num_past_boundary_steps=1,
+        num_future_boundary_steps=0,
+        current_boundary_step=True,
+        num_past_atmosphere_steps=1,
+        num_future_atmosphere_steps=0,
+        current_atmosphere_step=True,
+        standardize=False,
+        use_atmosphere_g2m=False,
+    )
+    (
+        _init,
+        _target,
+        forcing,
+        boundary_t,
+        atmosphere_t,
+        _times,
+    ) = [tensor.numpy() for tensor in dataset[0]]
+
+    np.testing.assert_equal(
+        forcing[:, 0, :], np.array([[11, 12], [12, 13], [13, 14]])
+    )
+    np.testing.assert_equal(
+        atmosphere_t[:, 0, :], np.array([[21, 22], [22, 23], [23, 24]])
+    )
+    np.testing.assert_equal(
+        boundary_t[:, 0, :], np.array([[31, 32], [32, 33], [33, 34]])
+    )

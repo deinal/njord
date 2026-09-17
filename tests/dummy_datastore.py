@@ -29,9 +29,11 @@ class DummyDatastore(BaseRegularGridDatastore):
     Sea/land masks are centered horizontal bands (full ``x``, limited ``y``):
     12 pixels at the surface and 6 pixels at 50 m on the default 24×24
     interior grid. A lateral-boundary datastore is a 28×28 halo with 14- and
-    8-pixel bands. Atmospheric forcing uses the same 24×24 grid (concat path).
+    8-pixel bands. Concat atmosphere uses the same 24×24 grid; atmosphere as
+    extra g2m nodes uses a coarser 12×12 grid over the same bbox.
     State features follow MDP-style stacking, with depth in the name
-    (``thetao_0m``, ``thetao_50m``, ...).
+    (``thetao_0m``, ``thetao_50m``, ...). Surface ice (``siconc``,
+    ``sithick``) on the surface.
     """
 
     SHORT_NAME = "dummydata"
@@ -44,8 +46,17 @@ class DummyDatastore(BaseRegularGridDatastore):
     BOUNDARY_GRID_SIZE = GRID_SIZE + 2 * HALO_CELLS
     BOUNDARY_SURFACE_BAND_WIDTH = 14
     BOUNDARY_DEPTH_BAND_WIDTH = 8
+    ATMOSPHERE_G2M_GRID_SIZE = 12
     FEATURE_NAMES = {
-        "state": ["zos", "thetao_0m", "so_0m", "thetao_50m", "so_50m"],
+        "state": [
+            "zos",
+            "siconc",
+            "sithick",
+            "thetao_0m",
+            "so_0m",
+            "thetao_50m",
+            "so_50m",
+        ],
         "forcing": ["forcing_feat_0", "forcing_feat_1"],
         "static": ["deptho"],
     }
@@ -290,6 +301,30 @@ class DummyDatastore(BaseRegularGridDatastore):
             depth_band_width=interior.depth_band_width,
             x_coords=interior._x,
             y_coords=interior._y,
+            feature_names={
+                "state": list(cls.FEATURE_NAMES["state"]),
+                "forcing": list(cls.ATMOSPHERE_FORCING_NAMES),
+                "static": list(cls.FEATURE_NAMES["static"]),
+            },
+        )
+
+    @classmethod
+    def atmosphere_g2m(cls, interior: "DummyDatastore", n_points_1d=None):
+        """Coarser 12×12 grid over the same bbox, all cells used as g2m nodes.
+
+        Distinct from concat atmosphere so indexing the ocean surface mask
+        would yield the wrong node count.
+        """
+        if n_points_1d is None:
+            n_points_1d = cls.ATMOSPHERE_G2M_GRID_SIZE
+        x = np.linspace(interior._x[0], interior._x[-1], n_points_1d)
+        y = np.linspace(interior._y[0], interior._y[-1], n_points_1d)
+        return cls(
+            n_timesteps=interior._n_timesteps,
+            surface_band_width=n_points_1d,
+            depth_band_width=n_points_1d,
+            x_coords=x,
+            y_coords=y,
             feature_names={
                 "state": list(cls.FEATURE_NAMES["state"]),
                 "forcing": list(cls.ATMOSPHERE_FORCING_NAMES),
@@ -649,3 +684,16 @@ class DummyDatastore(BaseRegularGridDatastore):
         self, stacked: bool = True, invert: bool = False
     ) -> ndarray:
         return self.get_mask(surface=True, stacked=stacked, invert=invert)
+
+    def fill_constant(self, category: str, value: float) -> None:
+        """Overwrite a category with a constant (for mask/window tests)."""
+        self.ds[category].values[:] = value
+
+    def fill_time_index(self, category: str, offset: int = 0) -> None:
+        """Set every grid/feature at time t to ``offset + t``."""
+        da = self.ds[category]
+        n_time = da.sizes["time"]
+        time_vals = np.arange(n_time, dtype=float) + offset
+        shape = [1] * da.ndim
+        shape[da.get_axis_num("time")] = n_time
+        da.values[:] = time_vals.reshape(shape)
