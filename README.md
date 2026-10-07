@@ -17,7 +17,7 @@ Mesh construction uses spherical or Euclidean k-means over sea points with Delau
     <img src="figures/global_model.png" width="720">
 </p>
 <p align="middle">
-    <em>One-step prediction in Njord. Two previous ocean states and atmospheric forcing are encoded onto a hierarchical mesh over sea points only. A latent variable <code>Z<sup>t</sup></code> is injected in the GNN processor; the decoder maps back to the grid and adds a residual to <code>X<sup>t−1</sup></code>, producing a sample from the one-step forecast distribution.</em>
+    <em>One-step prediction in Njord. Two previous ocean states <code>X<sup>t−2:t-1</sup></code> and atmospheric forcing <code>F<sup>t−2:t</sup></code> are encoded onto a hierarchical mesh over sea points only. A latent variable <code>Z<sup>t</sup></code> is injected in the GNN processor; the decoder maps back to the grid and adds a residual to <code>X<sup>t−1</sup></code>, producing a sample from the one-step forecast distribution.</em>
 </p>
 
 ---
