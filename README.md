@@ -35,10 +35,11 @@ Mesh construction uses spherical or Euclidean k-means over sea points with Delau
 
 #### [Njord: A Probabilistic Graph Neural Network for Ensemble Ocean Forecasting](https://arxiv.org/abs/2605.15470)
 ```
-@article{holmberg2026njord,
+@inproceedings{holmberg2026njord,
   title={Njord: A Probabilistic Graph Neural Network for Ensemble Ocean Forecasting},
   author={Holmberg, Daniel and Oskarsson, Joel and Wikingsson, Erik and Lindsten, Fredrik and Roos, Teemu},
-  journal={arXiv preprint arXiv:2605.15470},
+  booktitle={Advances in Neural Information Processing Systems},
+  volume={39},
   year={2026}
 }
 ```
@@ -50,7 +51,6 @@ Mesh construction uses spherical or Euclidean k-means over sea points with Delau
   author={Holmberg, Daniel and Clementi, Emanuela and Epicoco, Italo and Roos, Teemu},
   journal={Scientific Reports},
   volume={15},
-  number={1},
   pages={45051},
   year={2025}
 }
