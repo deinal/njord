@@ -1,0 +1,56 @@
+datastore:
+  kind: mdp
+  config_path: baltic_sea_gt_forecasts_mdp_config.yaml
+datastore_boundary:
+  kind: mdp
+  config_path: baltic_boundary_forecasts_mdp_config.yaml
+datastore_atmosphere:
+  kind: mdp
+  config_path: baltic_ifs_forecasts_mdp_config.yaml
+statistics_datastore:
+  kind: mdp
+  config_path: baltic_sea_mdp_config.yaml
+statistics_datastore_boundary:
+  kind: mdp
+  config_path: baltic_boundary_mdp_config.yaml
+statistics_datastore_atmosphere:
+  kind: mdp
+  config_path: baltic_era5_mdp_config.yaml
+training:
+  state_feature_weighting:
+    __config_class__: ManualStateFeatureWeighting
+    weights:
+      sla: 0.5
+      siconc: 0.5
+      sithick: 0.5
+      thetao_1m: 0.2
+      thetao_9m: 0.2
+      thetao_28m: 0.2
+      thetao_47m: 0.2
+      thetao_91m: 0.2
+      so_1m: 0.2
+      so_9m: 0.2
+      so_28m: 0.2
+      so_47m: 0.2
+      so_91m: 0.2
+      uo_1m: 0.2
+      uo_9m: 0.2
+      uo_28m: 0.2
+      uo_47m: 0.2
+      uo_91m: 0.2
+      vo_1m: 0.2
+      vo_9m: 0.2
+      vo_28m: 0.2
+      vo_47m: 0.2
+      vo_91m: 0.2
+  output_clamping:
+    upper:
+      siconc: 1.0
+    lower:
+      siconc: 0.0
+      sithick: 0.0
+  density_channel:
+    reference_var: siconc
+    associated_vars:
+      - siconc
+      - sithick

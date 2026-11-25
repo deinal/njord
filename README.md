@@ -139,6 +139,29 @@ python -m neural_lam.plot_global_graph_3d \
     --save global_cluster_graph.html
 ```
 
+## Pretrained models
+
+Njord-Baltic (`graph_efm`) and SeaCast (`graph_fm`) checkpoints for the Baltic Sea are published as [deinal/njord-baltic-models](https://huggingface.co/deinal/njord-baltic-models).
+They were uploaded with:
+```
+python upload_files.py
+```
+
+They can be downloaded into this repository with:
+```python
+from huggingface_hub import snapshot_download
+
+snapshot_download(
+    repo_id="deinal/njord-baltic-models",
+    repo_type="model",
+    local_dir="njord_baltic_models"
+)
+```
+
+The matching datastore configs and graphs are in [`data/`](data/README.md), and the Baltic zarrs they read are published as [deinal/njord-baltic-data](https://huggingface.co/datasets/deinal/njord-baltic-data).
+Point the `path` entries in the `data/*_mdp_config.yaml` files to your local copy of the zarrs.
+See [`njord_baltic_models/README.md`](njord_baltic_models/README.md) for the training and evaluation commands of each checkpoint.
+
 # Using Njord
 
 Once installed you will be able to train and evaluate models. For this you will in general need two things:
@@ -330,7 +353,8 @@ To train GraphCast use
 python -m neural_lam.train_model --model graphcast --graph 1level ...
 ```
 
-Checkpoint files for the paper models are available upon request.
+Pretrained Baltic checkpoints are available, see [Pretrained models](#pretrained-models).
+Other checkpoint files for the paper models are available upon request.
 
 ### High Performance Computing
 

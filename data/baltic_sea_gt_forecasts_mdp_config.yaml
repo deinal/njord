@@ -1,0 +1,187 @@
+schema_version: v0.5.0
+dataset_version: v0.1.0
+
+output:
+  variables:
+    mask: [grid_index, mask_feature]
+    static: [grid_index, static_feature]
+    state: [init_time, lead_time, grid_index, state_feature]
+    forcing: [init_time, lead_time, grid_index, forcing_feature]
+  coord_ranges:
+    init_time:
+      start: 2024-01-02T00:00
+      end: 2024-12-24T00:00
+      step: PT168H
+  chunking:
+    init_time: 1
+    lead_time: 1
+  splitting:
+    dim: init_time
+    splits:
+      test:
+        start: 2024-01-02T00:00
+        end: 2024-12-24T00:00
+
+inputs:
+  sea_single_level:
+    path: /scratch/project_462001063/dholmber/ocean-data/data/baltic_forecasts.zarr
+    dims: [init_time, lead_time, longitude, latitude]
+    variables:
+      - sla
+      - siconc
+      - sithick
+    dim_mapping:
+      init_time:
+        method: rename
+        dim: init_time
+      lead_time:
+        method: rename
+        dim: lead_time
+      grid_index:
+        method: stack
+        dims: [longitude, latitude]
+      state_feature:
+        method: stack_variables_by_var_name
+        name_format: "{var_name}"
+    target_output_variable: state
+
+  sea_depth_levels:
+    path: /scratch/project_462001063/dholmber/ocean-data/data/baltic_forecasts.zarr
+    dims: [init_time, lead_time, longitude, latitude, depth]
+    variables:
+      thetao:
+        depth:
+          values: [1, 9, 28, 47, 91]
+          units: m
+      so:
+        depth:
+          values: [1, 9, 28, 47, 91]
+          units: m
+      uo:
+        depth:
+          values: [1, 9, 28, 47, 91]
+          units: m
+      vo:
+        depth:
+          values: [1, 9, 28, 47, 91]
+          units: m
+    dim_mapping:
+      init_time:
+        method: rename
+        dim: init_time
+      lead_time:
+        method: rename
+        dim: lead_time
+      grid_index:
+        method: stack
+        dims: [longitude, latitude]
+      state_feature:
+        method: stack_variables_by_var_name
+        dims: [depth]
+        name_format: "{var_name}_{depth}m"
+    target_output_variable: state
+
+  forcing:
+    path: /scratch/project_462001063/dholmber/ocean-data/data/baltic_forecasts.zarr
+    dims: [init_time, lead_time, longitude, latitude]
+    derived_variables:
+      # derive variables to be used as forcings
+      day_of_year_sin:
+        kwargs:
+          time: ds_input.time
+          component: sin
+        function: mllam_data_prep.ops.derive_variable.time_components.calculate_day_of_year
+      day_of_year_cos:
+        kwargs:
+          time: ds_input.time
+          component: cos
+        function: mllam_data_prep.ops.derive_variable.time_components.calculate_day_of_year
+    dim_mapping:
+      init_time:
+        method: rename
+        dim: init_time
+      lead_time:
+        method: rename
+        dim: lead_time
+      grid_index:
+        method: stack
+        dims: [longitude, latitude]
+      forcing_feature:
+        method: stack_variables_by_var_name
+        name_format: "{var_name}"
+    target_output_variable: forcing
+
+  mask_single_level:
+    path: /scratch/project_462001063/dholmber/ocean-data/data/baltic_mask.zarr
+    dims: [longitude, latitude]
+    variables:
+      - sla
+      - siconc
+      - sithick
+    dim_mapping:
+      grid_index:
+        method: stack
+        dims: [longitude, latitude]
+      mask_feature:
+        method: stack_variables_by_var_name
+        name_format: "{var_name}"
+    target_output_variable: mask
+
+  mask_depth_levels:
+    path: /scratch/project_462001063/dholmber/ocean-data/data/baltic_mask.zarr
+    dims: [longitude, latitude, depth]
+    variables:
+      thetao:
+        depth:
+          values: [1, 9, 28, 47, 91]
+          units: m
+      so:
+        depth:
+          values: [1, 9, 28, 47, 91]
+          units: m
+      uo:
+        depth:
+          values: [1, 9, 28, 47, 91]
+          units: m
+      vo:
+        depth:
+          values: [1, 9, 28, 47, 91]
+          units: m
+    dim_mapping:
+      grid_index:
+        method: stack
+        dims: [longitude, latitude]
+      mask_feature:
+          method: stack_variables_by_var_name
+          dims: [depth]
+          name_format: "{var_name}_{depth}m"
+    target_output_variable: mask
+
+  static:
+    path: /scratch/project_462001063/dholmber/ocean-data/data/baltic_static.zarr
+    dims: [longitude, latitude]
+    variables:
+      - deptho
+      - mdt
+      - x_coord
+      - y_coord
+      - coast_dist
+    dim_mapping:
+      grid_index:
+        method: stack
+        dims: [longitude, latitude]
+      static_feature:
+        method: stack_variables_by_var_name
+        name_format: "{var_name}"
+    target_output_variable: static
+
+extra:
+  projection:
+    class_name: LambertConformal
+    kwargs:
+      central_longitude: 20.0
+      central_latitude: 60.0
+      standard_parallels: [60.0, 60.0]
+      globe:
+        semimajor_axis: 6371229.0
+        semiminor_axis: 6371229.0
