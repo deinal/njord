@@ -31,7 +31,7 @@ output:
 
 inputs:
   atmosphere_single_level:
-    path: /scratch/project_462001063/dholmber/ocean-data/data/baltic_era5.zarr
+    path: njord_baltic_data/baltic_era5.zarr
     dims: [time, longitude, latitude]
     variables:
       - sotemair

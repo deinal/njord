@@ -23,7 +23,7 @@ output:
 
 inputs:
   atmosphere_single_level:
-    path: /scratch/project_462001063/dholmber/ocean-data/data/baltic_ifs_forecasts.zarr
+    path: njord_baltic_data/baltic_ifs_forecasts.zarr
     dims: [init_time, lead_time, longitude, latitude]
     variables:
       - sotemair

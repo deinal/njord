@@ -1,0 +1,55 @@
+datastore:
+  kind: mdp
+  config_path: analysis_ocean_forecasts_mdp_config.yaml
+datastore_atmosphere:
+  kind: mdp
+  config_path: analysis_ifs_forecasts_mdp_config.yaml
+statistics_datastore:
+  kind: mdp
+  config_path: global_ocean_1_4_mdp_config.yaml
+statistics_datastore_atmosphere:
+  kind: mdp
+  config_path: global_era5_1_4_mdp_config.yaml
+training:
+  lat_weighted_loss: True
+  state_feature_weighting:
+    __config_class__: ManualStateFeatureWeighting
+    weights:
+      zos: 0.5
+      siconc: 0.5
+      sithick: 0.5
+      thetao_0m: 0.17
+      thetao_47m: 0.17
+      thetao_92m: 0.17
+      thetao_222m: 0.17
+      thetao_318m: 0.17
+      thetao_541m: 0.17
+      so_0m: 0.17
+      so_47m: 0.17
+      so_92m: 0.17
+      so_222m: 0.17
+      so_318m: 0.17
+      so_541m: 0.17
+      uo_0m: 0.17
+      uo_47m: 0.17
+      uo_92m: 0.17
+      uo_222m: 0.17
+      uo_318m: 0.17
+      uo_541m: 0.17
+      vo_0m: 0.17
+      vo_47m: 0.17
+      vo_92m: 0.17
+      vo_222m: 0.17
+      vo_318m: 0.17
+      vo_541m: 0.17
+  output_clamping:
+    upper:
+      siconc: 1.0
+    lower:
+      siconc: 0.0
+      sithick: 0.0
+  density_channel:
+    reference_var: siconc
+    associated_vars:
+      - siconc
+      - sithick

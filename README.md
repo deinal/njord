@@ -159,7 +159,7 @@ snapshot_download(
 ```
 
 The matching datastore configs and graphs are in [`data/`](data/README.md), and the Baltic zarrs they read are published as [deinal/njord-baltic-data](https://huggingface.co/datasets/deinal/njord-baltic-data).
-Point the `path` entries in the `data/*_mdp_config.yaml` files to your local copy of the zarrs.
+Download them to `njord_baltic_data/` in the repository root, which is where the `path` entries in the `data/*_mdp_config.yaml` files point (relative to the directory you run from).
 See [`njord_baltic_models/README.md`](njord_baltic_models/README.md) for the training and evaluation commands of each checkpoint.
 
 # Using Njord
@@ -213,7 +213,7 @@ training:
 Optional keys `statistics_datastore`, `statistics_datastore_boundary` and `statistics_datastore_atmosphere` point at separate MDP configs whose mean/std are used for normalisation.
 That is useful when training or evaluating on forecast tensors (`init_time` × `lead_time`) while still normalising with statistics from a longer reanalysis/analysis record.
 See [`data/baltic_sea_finetune.yaml`](data/baltic_sea_finetune.yaml) (analysis along `time`) and [`data/baltic_sea_forecasts.yaml`](data/baltic_sea_forecasts.yaml) (forecasts + `statistics_*`).
-Paths inside those files are machine-specific.
+The `path` entries inside the MDP configs are relative to the directory you run from, normally the repository root.
 
 Ocean, atmosphere and boundary fields used here go through [mllam-data-prep](https://github.com/mllam/mllam-data-prep).
 Typical sources are Copernicus Marine ocean products, ERA5 for training-time atmosphere, and IFS/AIFS for forecast evaluation.

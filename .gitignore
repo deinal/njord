@@ -3,7 +3,7 @@ wandb
 saved_models
 lightning_logs
 configs
-./graphs
+data/graphs
 *.sif
 sweeps
 .vscode

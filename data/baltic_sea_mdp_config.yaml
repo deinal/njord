@@ -32,7 +32,7 @@ output:
 
 inputs:
   sea_single_level:
-    path: /scratch/project_462001063/dholmber/ocean-data/data/baltic_data.zarr
+    path: njord_baltic_data/baltic_data.zarr
     dims: [time, longitude, latitude]
     variables:
       - sla
@@ -51,7 +51,7 @@ inputs:
     target_output_variable: state
 
   sea_depth_levels:
-    path: /scratch/project_462001063/dholmber/ocean-data/data/baltic_data.zarr
+    path: njord_baltic_data/baltic_data.zarr
     dims: [time, longitude, latitude, depth]
     variables:
       thetao:
@@ -84,7 +84,7 @@ inputs:
     target_output_variable: state
 
   forcing:
-    path: /scratch/project_462001063/dholmber/ocean-data/data/baltic_data.zarr
+    path: njord_baltic_data/baltic_data.zarr
     dims: [time, longitude, latitude]
     derived_variables:
       # derive variables to be used as forcings
@@ -111,7 +111,7 @@ inputs:
     target_output_variable: forcing
 
   mask_single_level:
-    path: /scratch/project_462001063/dholmber/ocean-data/data/baltic_mask.zarr
+    path: njord_baltic_data/baltic_mask.zarr
     dims: [longitude, latitude]
     variables:
       - sla
@@ -127,7 +127,7 @@ inputs:
     target_output_variable: mask
 
   mask_depth_levels:
-    path: /scratch/project_462001063/dholmber/ocean-data/data/baltic_mask.zarr
+    path: njord_baltic_data/baltic_mask.zarr
     dims: [longitude, latitude, depth]
     variables:
       thetao:
@@ -157,7 +157,7 @@ inputs:
     target_output_variable: mask
 
   static:
-    path: /scratch/project_462001063/dholmber/ocean-data/data/baltic_static.zarr
+    path: njord_baltic_data/baltic_static.zarr
     dims: [longitude, latitude]
     variables:
       - deptho

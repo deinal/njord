@@ -23,7 +23,7 @@ output:
 
 inputs:
   boundary_single_level:
-    path: /scratch/project_462001063/dholmber/ocean-data/data/baltic_boundary_forecasts.zarr
+    path: njord_baltic_data/baltic_boundary_forecasts.zarr
     dims: [init_time, lead_time, longitude, latitude]
     variables:
       - zos
@@ -41,9 +41,9 @@ inputs:
         method: stack_variables_by_var_name
         name_format: "{var_name}"
     target_output_variable: forcing
-  
+
   boundary_depth_levels:
-    path: /scratch/project_462001063/dholmber/ocean-data/data/baltic_boundary_forecasts.zarr
+    path: njord_baltic_data/baltic_boundary_forecasts.zarr
     dims: [init_time, lead_time, longitude, latitude, depth]
     variables:
         thetao:
@@ -79,7 +79,7 @@ inputs:
     target_output_variable: forcing
 
   boundary_static:
-    path: /scratch/project_462001063/dholmber/ocean-data/data/baltic_boundary_static.zarr
+    path: njord_baltic_data/baltic_boundary_static.zarr
     dims: [longitude, latitude]
     variables:
       - deptho
@@ -92,9 +92,9 @@ inputs:
         method: stack_variables_by_var_name
         name_format: "{var_name}"
     target_output_variable: static
-  
+
   boundary_mask_single_level:
-    path: /scratch/project_462001063/dholmber/ocean-data/data/baltic_boundary_mask.zarr
+    path: njord_baltic_data/baltic_boundary_mask.zarr
     dims: [longitude, latitude]
     variables:
       - zos
@@ -108,7 +108,7 @@ inputs:
     target_output_variable: mask
 
   boundary_mask_depth_levels:
-    path: /scratch/project_462001063/dholmber/ocean-data/data/baltic_boundary_mask.zarr
+    path: njord_baltic_data/baltic_boundary_mask.zarr
     dims: [longitude, latitude, depth]
     variables:
       thetao:
