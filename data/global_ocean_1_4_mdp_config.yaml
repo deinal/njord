@@ -32,7 +32,7 @@ output:
 
 inputs:
   sea_single_level:
-    path: njord_global_data/global_data_1_4.zarr
+    path: njord_global_reanalysis/global_data_1_4.zarr
     dims: [time, longitude, latitude]
     variables:
       - zos
@@ -51,7 +51,7 @@ inputs:
     target_output_variable: state
 
   sea_depth_levels:
-    path: njord_global_data/global_data_1_4.zarr
+    path: njord_global_reanalysis/global_data_1_4.zarr
     dims: [time, longitude, latitude, depth]
     variables:
       thetao:
@@ -84,7 +84,7 @@ inputs:
     target_output_variable: state
 
   forcing:
-    path: njord_global_data/global_data_1_4.zarr
+    path: njord_global_reanalysis/global_data_1_4.zarr
     dims: [time, longitude, latitude]
     derived_variables:
       # derive variables to be used as forcings
@@ -111,7 +111,7 @@ inputs:
     target_output_variable: forcing
 
   mask_single_level:
-    path: njord_global_data/global_mask_1_4.zarr
+    path: njord_global_reanalysis/global_mask_1_4.zarr
     dims: [longitude, latitude]
     variables:
       - zos
@@ -127,7 +127,7 @@ inputs:
     target_output_variable: mask
 
   mask_depth_levels:
-    path: njord_global_data/global_mask_1_4.zarr
+    path: njord_global_reanalysis/global_mask_1_4.zarr
     dims: [longitude, latitude, depth]
     variables:
       thetao:
@@ -157,7 +157,7 @@ inputs:
     target_output_variable: mask
 
   static:
-    path: njord_global_data/global_static_1_4.zarr
+    path: njord_global_reanalysis/global_static_1_4.zarr
     dims: [longitude, latitude]
     variables:
       - deptho

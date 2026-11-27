@@ -2,7 +2,7 @@
 
 Configs for the Njord models: the regional Baltic Sea models in [`njord_baltic_models`](../njord_baltic_models/README.md) and the global models in [`njord_global_models`](../njord_global_models/README.md).
 All datasets are built with [mllam-data-prep](https://github.com/mllam/mllam-data-prep) at a daily time step.
-The `path` entries are relative to the repository root and point to `njord_baltic_data/` (Baltic) and `njord_global_data/` (global), so run all commands from the repository root.
+The `path` entries are relative to the repository root and point to `njord_baltic_data/` (Baltic) and `njord_global_reanalysis/` / `njord_global_analysis/` (global reanalysis / analysis), so run all commands from the repository root.
 
 Neural-LAM configs (`*.yaml` without `_mdp_config`) are passed as `--config_path` and name the mllam-data-prep configs (`*_mdp_config.yaml`) to read.
 Each mllam-data-prep config is built into `<config name>.zarr` next to it, and graphs are read from `data/graphs/`.

@@ -23,7 +23,7 @@ output:
 
 inputs:
   atmosphere_single_level:
-    path: njord_global_data/ifs_analysis_forecasts.zarr
+    path: njord_global_analysis/ifs_analysis_forecasts.zarr
     dims: [init_time, lead_time, longitude, latitude]
     variables:
       - sotemair
